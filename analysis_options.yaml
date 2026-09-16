@@ -13,3 +13,7 @@ analyzer:
 linter:
   rules:
     public_member_api_docs: false
+    # Suggests `const .named(...)` for a named constructor, but the Dart
+    # 3.13.2 compiler rejects that form (field_initializer_outside_constructor),
+    # so the fix the lint asks for does not build. Disabled until they agree.
+    unnecessary_type_name_in_constructor: false
