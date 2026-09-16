@@ -93,9 +93,9 @@ In scope, and nothing else:
 
 ### State management: Bloc and Cubit
 
-**Not because Bloc is better than Riverpod in the abstract, but because this repo has already chosen.** `pubspec.yaml` ships `bloc`, `flutter_bloc`, `bloc_test` and `bloc_lint`, and CI runs `run_bloc_lint: true`. Bloc is enforced by the build, not merely preferred. It also matches the house Flutter standard in the Docalla codebase, which uses Bloc for session and app-level state and a Cubit per screen or action.
+**Not because Bloc is better than Riverpod in the abstract, but because this repo has already chosen.** `pubspec.yaml` ships `bloc`, `flutter_bloc`, `bloc_test` and `bloc_lint`, and CI runs `run_bloc_lint: true`. Bloc is enforced by the build, not merely preferred. Bloc carries session and app-level state; a Cubit backs each screen and each action.
 
-Division of labor, following Docalla:
+Division of labor:
 
 - **Bloc** for app and session state where events need a durable audit trail.
 - **Cubit** for each screen and each action. Public methods return `void` or `Future<void>`; state lives in a `freezed` sealed union in a `part` file.
@@ -104,7 +104,7 @@ Division of labor, following Docalla:
 
 ### Layering
 
-Feature-first, with clean-architecture layers inside each feature. The boundary rules are Docalla's, and they are worth restating because they are the thing that keeps a fintech codebase testable:
+Feature-first, with clean-architecture layers inside each feature. The boundary rules are worth stating explicitly, because they are the thing that keeps a fintech codebase testable:
 
 > `domain/` imports neither `data/` nor Flutter. It depends on nothing. `data/` and `presentation/` both depend on `domain/`, never on each other. Presentation calls a **usecase**, never a repository directly.
 
@@ -117,7 +117,7 @@ lib/
 │   ├── error/          Failure sealed union
 │   ├── exception/      AppException sealed union
 │   ├── storage/        Hive box access + secure storage wrapper
-│   ├── theme/          AstraVest tokens as a ThemeExtension
+│   ├── theme/          design tokens as a ThemeExtension
 │   └── components/     shared widgets, semantics baked in
 └── features/
     ├── wallet_home/    data · domain · presentation
@@ -127,7 +127,7 @@ lib/
 
 ### Errors
 
-Three vocabularies, one translation chain, copied from Docalla because it is the part of that codebase most worth copying:
+Three vocabularies, one translation chain:
 
 ```
 DioException / Object
@@ -138,7 +138,7 @@ DioException / Object
 
 A single `EitherSafeRunner` holds the only `try`/`catch` in the app; repositories return `Either<Failure, T>`. One place to change when error handling changes, and no scattered catch blocks silently swallowing a failed transfer.
 
-**One gap in Docalla's version that this app fixes:** it parses only `response.data['message']`, so every 4xx and 5xx other than 401/402 collapses into a single `ServerFailure` and the status code is unavailable for branching. That is fatal here, because [the offline queue needs to tell a definitive rejection from an ambiguous failure](#terminal-states-split-by-knowledge). Status codes are preserved.
+**One pitfall this design avoids deliberately.** A translation layer that parses only `response.data['message']` collapses every 4xx and 5xx other than 401/402 into a single `ServerFailure`, leaving the status code unavailable for branching. That is fatal here, because [the offline queue needs to tell a definitive rejection from an ambiguous failure](#terminal-states-split-by-knowledge). Status codes are preserved.
 
 ### Storage
 
@@ -416,11 +416,11 @@ One question this design would ask a real backend team: **what is the idempotenc
 
 ## Design system and UI quality
 
-Two references govern the UI, and they have different jurisdictions. **AstraVest decides what it renders as. The ui-ux-pro-max rule set decides whether it behaves like a production app.** Where they conflict, AstraVest wins, because it is the house design system and its values were measured from a shipping product rather than recommended in the abstract.
+Two concerns govern the UI, and they have different jurisdictions. **The design system decides what it renders as. The UI quality rules decide whether it behaves like a production app.** Where they conflict, the design system wins, because its values were measured from a shipping product rather than recommended in the abstract.
 
 ### Tokens
 
-AstraVest's three-layer model is used as-is: `Primitives` → `Semantic` → components. **Designs consume `Semantic`. Nothing binds directly to a raw value.** In Flutter this becomes a `ThemeExtension` holding the mode-varying semantic roles, with mode-invariant primitives as constants.
+A three-layer token model is used: `Primitives` → `Semantic` → components. **Designs consume `Semantic`. Nothing binds directly to a raw value.** In Flutter this becomes a `ThemeExtension` holding the mode-varying semantic roles, with mode-invariant primitives as constants.
 
 | Token | Light | Dark |
 |---|---|---|
@@ -442,14 +442,14 @@ Scale: spacing on a 4pt rhythm (`4 8 12 16 20 24 32 40 48 64`), radius favoring 
 
 ### Where the two references disagree
 
-- **The design-system generator was run and its recommendation rejected.** Queried for a fintech mobile wallet, it returned Dark Mode (OLED), dark-only, gold `#F59E0B` with purple `#8B5CF6`, and IBM Plex Sans. That contradicts a brand that is already decided, proposes dark-only for a system that is light-first with a dark twin, and shipped a *web* checklist — `cursor-pointer`, hover states, 1440px breakpoints — for a Flutter mobile app. Its **rule layers are kept**; its palette, style and typography recommendation is discarded. `[JUDGMENT]`
-- **Icons.** The rule set specifies Phosphor with Heroicons as fallback. AstraVest specifies Vuesax Bold, one family, one weight, 997 components. **AstraVest wins.** The underlying *principle* is identical in both and is what actually matters: one family, one weight, vector only, **no emoji as icons**, sizes snapped to a token ramp, and a 44pt frame plus an accessibility label on every icon-only control.
+- **The design-system generator was run and its recommendation rejected.** Queried for a fintech mobile wallet, it returned a dark-only theme, gold `#F59E0B` with purple `#8B5CF6`, and IBM Plex Sans. That contradicts a brand that is already decided, proposes dark-only for a system that is light-first with a dark twin, and shipped a *web* checklist — `cursor-pointer`, hover states, 1440px breakpoints — for a Flutter mobile app. Its **rule layers are kept**; its palette, style and typography recommendation is discarded. `[JUDGMENT]`
+- **Icons.** General UI guidance and the design system name different icon libraries; the library choice follows the design system. The underlying *principle* is identical in both and is what actually matters: one family, one weight, vector only, **no emoji as icons**, sizes snapped to a token ramp, and a 44pt frame plus an accessibility label on every icon-only control.
 
 ### Where they independently agree
 
 Worth naming, because two sources reaching the same rule from different directions is the strongest form of citation.
 
-**Sub-12px type.** The rule set says never render critical text below 12pt. AstraVest's own accessibility log carries the same finding as an open item, with the remedy "map 8px to `Caption` 10/14, 10px body to `Body/Small` 12/20, and keep 10px only for `Label/Small` and `Overline` on non-essential metadata." Same rule, two sources, and it is adopted.
+**Sub-12px type.** General UI guidance says never render critical text below 12pt, and the design system's own accessibility review reached the same conclusion independently, with the remedy: map 8px to `Caption` 10/14, 10px body to `Body/Small` 12/20, and keep 10px only for `Label/Small` and `Overline` on non-essential metadata. Same rule, two sources, and it is adopted.
 
 ### Interaction detail
 
@@ -466,21 +466,21 @@ The difference between a production app and a generated one is mostly here:
 
 ### The Pending chip, derived rather than invented
 
-AstraVest has **no** offline, pending, queued, retry or toast convention. Confirmed by exhaustive search of its references, and said plainly here rather than implied.
+The design system carries **no** offline, pending, queued, retry or toast convention. Confirmed by exhaustive search rather than assumed, and said plainly here rather than implied.
 
-So the chip is **derived from AstraVest's own status-chip rule**, which is explicit:
+So the chip is **derived from the design system's own status-chip rule**, which is explicit:
 
 > Do not build a filled tone chip with tone text. It will fail review in both themes.
 
 Measured, a filled amber Pending chip is `#ffb300` on `#ff8f00` — **1.27:1** in dark. The mandated pattern instead is a neutral `bg/subtle` pill, a 6px dot in the tone color, and the label in `text/primary`. That measures roughly 19:1 in light and 11:1 in dark, and it carries the state in the **word** as well as the color, which also satisfies the do-not-signal-by-color-alone rule.
 
-**Only exception rows get a chip.** AstraVest again: *"the activity list annotates the exception, not the rule… a list where every row is badged has no signal in the badge."* Settled transactions carry no chip. `Pending`, `Unresolved` and `Rejected` do.
+**Only exception rows get a chip.** The same source again: *"the activity list annotates the exception, not the rule… a list where every row is badged has no signal in the badge."* Settled transactions carry no chip. `Pending`, `Unresolved` and `Rejected` do.
 
 ---
 
 ## Accessibility
 
-The brief makes this non-negotiable `[SOURCE: brief §2.2]`, and it is worth being honest that neither reference fully covers it: AstraVest's accessibility material is a **color-contrast measurement log** with no screen-reader, focus-order, or font-scale rules at all. Those are derived below and flagged as derived.
+The brief makes this non-negotiable `[SOURCE: brief §2.2]`, and it is worth being honest that neither reference fully covers it: the design system's accessibility material is a **color-contrast measurement log** with no screen-reader, focus-order, or font-scale rules at all. Those are derived below and flagged as derived.
 
 ### Contrast rules that constrain the layout
 
@@ -501,7 +501,7 @@ The brief makes this non-negotiable `[SOURCE: brief §2.2]`, and it is worth bei
 
 The app respects the system font scale. It does **not** clamp it to 1.0, which is the common shortcut and defeats the requirement.
 
-**This genuinely conflicts with the design system, and the conflict is named rather than hidden.** AstraVest specifies fixed heights — list rows at 66 and 72, CTAs at 52, fields at 48 and 52. Honoring the system font scale means **those become minimums, not fixed values**. Rows grow, and the layout is built to let them: no fixed-height text containers, no `maxLines: 1` on a label that carries meaning, wrapping preferred over truncation.
+**This genuinely conflicts with the design system, and the conflict is named rather than hidden.** The design system specifies fixed heights — list rows at 66 and 72, CTAs at 52, fields at 48 and 52. Honoring the system font scale means **those become minimums, not fixed values**. Rows grow, and the layout is built to let them: no fixed-height text containers, no `maxLines: 1` on a label that carries meaning, wrapping preferred over truncation.
 
 The layout is verified at the largest system font size as part of review, not assumed.
 
@@ -576,15 +576,6 @@ The things that would change the design, not the wording.
 3. **Should a queued transfer be cancellable before it drains?** It is a natural user expectation and it interacts badly with an entry that may already be `inFlight`. Currently out of scope.
 4. **CBN and NDPA touchpoints.** Queued money movement implies an audit trail — what is logged, retained how long, and readable by whom. Flagged as a real surface rather than answered here; the brief notes candidates are not expected to be regulatory experts `[SOURCE: brief §1]`.
 
----
-
-## References
-
-| Reference | Used for |
-|---|---|
-| Docalla mobile app | Error chain, DI annotations, storage split, the outbox/drain-policy/backoff pattern |
-| AstraVest Design System v1.0 | Tokens, type ramp, spacing, contrast measurements, component conventions |
-| ui-ux-pro-max | Flutter and app-interface rule layers, interaction and a11y checklists |
 
 ---
 
