@@ -9,28 +9,43 @@ void main() {
       const colors = AppThemeColors.light;
       expect(colors.primary, const Color(0xFF1174ED));
       expect(colors.primaryStrong, const Color(0xFF0E5FC4));
+      expect(colors.brandSubtle, const Color(0xFFE8F1FD));
       expect(colors.background, const Color(0xFFFAF9F6));
       expect(colors.cards, const Color(0xFFFFFFFF));
       expect(colors.fill, const Color(0xFFF3F5F7));
-      expect(colors.divider, const Color(0xFFF3F5F7));
+      expect(colors.border, const Color(0xFFEAEAEA));
+      expect(colors.divider, const Color(0xFFEAEAEA));
       expect(colors.textHeading, const Color(0xFF000000));
       expect(colors.textSubheading, const Color(0xFF4A4A49));
       expect(colors.subtext, const Color(0xFF686766));
       expect(colors.warning, const Color(0xFFFF8F00));
+      expect(colors.successSurface, const Color(0xFFE3F7E9));
     });
 
     test('dark pins every role', () {
       const colors = AppThemeColors.dark;
       expect(colors.primary, const Color(0xFF1174ED));
-      expect(colors.primaryStrong, const Color(0xFF0E5FC4));
+      expect(colors.primaryStrong, const Color(0xFF6BA7F3));
+      expect(colors.brandSubtle, const Color(0xFF08356E));
       expect(colors.background, const Color(0xFF1F1F1F));
       expect(colors.cards, const Color(0xFF292929));
       expect(colors.fill, const Color(0xFF3D3F47));
-      expect(colors.divider, const Color(0xFF3D3F47));
+      expect(colors.border, const Color(0xFF3E3E3E));
+      expect(colors.divider, const Color(0xFF3E3E3E));
       expect(colors.textHeading, const Color(0xFFFFFFFF));
       expect(colors.textSubheading, const Color(0xFFA9A9A9));
       expect(colors.subtext, const Color(0xFF8F8F8F));
       expect(colors.warning, const Color(0xFFFFB300));
+      expect(colors.successSurface, const Color(0x290A7D2E));
+    });
+
+    test('brand as a foreground moves between modes', () {
+      // The light value measures about 2.1:1 on the dark canvas, so a single
+      // shared value would be unreadable in one mode or the other.
+      expect(
+        AppThemeColors.dark.primaryStrong,
+        isNot(AppThemeColors.light.primaryStrong),
+      );
     });
 
     test('copyWith replaces only what it is given', () {

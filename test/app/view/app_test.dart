@@ -30,7 +30,9 @@ void main() {
 
   group('App', () {
     testWidgets('opens on the wallet', (tester) async {
-      await tester.pumpWidget(const App());
+      // A const instance is canonicalized, so the constructor never runs.
+      // ignore: prefer_const_constructors
+      await tester.pumpWidget(App());
 
       expect(find.byType(WalletPage), findsOneWidget);
     });

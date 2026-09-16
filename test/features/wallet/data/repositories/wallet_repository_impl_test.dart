@@ -147,12 +147,12 @@ void main() {
 
     test('an exhausted action is shown as failed, not hidden', () async {
       online(connected: true);
+      backend.failNext = 10;
       await sync.enqueue(
         type: PendingActionType.send,
         amountKobo: 500000,
         payload: const {'recipient': '0123456789'},
       );
-      backend.failNext = 10;
       for (var i = 0; i < 5; i++) {
         await sync.drain();
       }

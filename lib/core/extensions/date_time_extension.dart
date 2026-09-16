@@ -24,6 +24,13 @@ extension DateTimeX on DateTime {
 
   String get timeLabel => _clock.format(this);
 
+  /// Morning until noon, afternoon until 17:00, evening after.
+  String get greeting {
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  }
+
   /// Whole days from now, negative once the date is past.
   int get daysFromNow {
     final now = DateTime.now();

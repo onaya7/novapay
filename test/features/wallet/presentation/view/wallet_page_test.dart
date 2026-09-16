@@ -5,6 +5,11 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:novapay/core/components/state_widgets.dart';
 import 'package:novapay/core/injections/injection.dart';
+import 'package:novapay/features/savings/presentation/cubit/savings_cubit.dart';
+import 'package:novapay/features/savings/presentation/view/savings_page.dart';
+import 'package:novapay/features/send_money/domain/entities/transfer_draft.dart';
+import 'package:novapay/features/send_money/presentation/cubit/send_money_cubit.dart';
+import 'package:novapay/features/send_money/presentation/view/send_money_page.dart';
 import 'package:novapay/features/wallet/domain/entities/activity_item.dart';
 import 'package:novapay/features/wallet/domain/entities/wallet_snapshot.dart';
 import 'package:novapay/features/wallet/presentation/cubit/wallet_cubit.dart';
@@ -14,6 +19,11 @@ import 'package:novapay/features/wallet/presentation/widgets/wallet_widgets.dart
 import '../../../../helpers/helpers.dart';
 
 class _MockWalletCubit extends MockCubit<WalletState> implements WalletCubit;
+
+class _MockSendMoneyCubit extends MockCubit<SendMoneyState>
+    implements SendMoneyCubit;
+
+class _MockSavingsCubit extends MockCubit<SavingsState> implements SavingsCubit;
 
 ActivityItem _item(String id) => ActivityItem(
   id: id,
@@ -41,9 +51,15 @@ void main() {
   testWidgets('the wallet is a root screen, so it offers no back', (
     tester,
   ) async {
-    await pumpView(tester, const WalletState.loading());
+    await pumpView(
+      tester,
+      const WalletState.ready(
+        WalletSnapshot(confirmedKobo: 24800000, pendingKobo: 0, activity: []),
+      ),
+    );
 
     expect(find.text('Wallet'), findsOneWidget);
+    expect(find.byType(WalletHeader), findsOneWidget);
     expect(find.byTooltip('Back'), findsNothing);
   });
 
@@ -102,6 +118,55 @@ void main() {
       tester.widget<ActivityRow>(find.byType(ActivityRow).first).key,
       const ValueKey('a'),
     );
+  });
+
+  testWidgets('the primary action opens Send Money', (tester) async {
+    final sendCubit = _MockSendMoneyCubit();
+    when(sendCubit.start).thenAnswer((_) async {});
+    whenListen(
+      sendCubit,
+      const Stream<SendMoneyState>.empty(),
+      initialState: const SendMoneyState.editing(TransferDraft()),
+    );
+    sl.registerFactory<SendMoneyCubit>(() => sendCubit);
+    addTearDown(sl.reset);
+
+    await pumpView(
+      tester,
+      const WalletState.ready(
+        WalletSnapshot(confirmedKobo: 24800000, pendingKobo: 0, activity: []),
+      ),
+    );
+
+    await tester.tap(find.text('Send'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SendMoneyView), findsOneWidget);
+  });
+
+  testWidgets('Save opens NovaSave', (tester) async {
+    final savings = _MockSavingsCubit();
+    when(savings.start).thenAnswer((_) async {});
+    when(savings.refresh).thenAnswer((_) async {});
+    whenListen(
+      savings,
+      const Stream<SavingsState>.empty(),
+      initialState: const SavingsState.loading(),
+    );
+    sl.registerFactory<SavingsCubit>(() => savings);
+    addTearDown(sl.reset);
+
+    await pumpView(
+      tester,
+      const WalletState.ready(
+        WalletSnapshot(confirmedKobo: 24800000, pendingKobo: 0, activity: []),
+      ),
+    );
+
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SavingsView), findsOneWidget);
   });
 
   testWidgets('pulling down asks for a reload', (tester) async {

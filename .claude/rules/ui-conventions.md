@@ -22,9 +22,14 @@ semantic role nobody has named yet, so add the field instead.
 No raw `Color(0x..)` or `Color.fromARGB(...)` in a widget. Use `AppColor.white`/`AppColor.black`,
 not `Colors.white`/`Colors.black`. `Colors.transparent` stays inline.
 
-The ten roles, read as `context.colors` or `AppThemeColors.of(context)`:
-`primary`, `primaryStrong`, `background`, `cards`, `fill`, `divider`, `textHeading`,
-`textSubheading`, `subtext`, `warning`. `success` and `danger` are invariant and live on `AppColor`.
+The thirteen roles, read as `context.colors` or `AppThemeColors.of(context)`:
+`primary`, `primaryStrong`, `brandSubtle`, `background`, `cards`, `fill`, `border`, `divider`,
+`textHeading`, `textSubheading`, `subtext`, `warning`, `successSurface`. `success` and `danger` are
+invariant and live on `AppColor`.
+
+`border` is the hairline around a surface; `fill` is a neutral *fill* and never a border or a
+foreground. A raised surface is the balance card and nothing else — use `AppSize.cardShadow` there
+and keep everything else flat.
 
 `test/config/theme/app_theme_colors_test.dart` pins every role in both modes. Change an expected
 value there only because the design changed, never to make the test pass.
@@ -35,14 +40,17 @@ value there only because the design changed, never to make the test pass.
 - **Never `subtext` or `textSubheading` on `fill` in dark**: 3.25:1 and 4.47:1, both fail. Put them
   on `background` or `cards`.
 - Text on brand binds `AppColor.onBrand`, never an inverse role that flips with the mode.
+- **`primaryStrong` is brand as a foreground and differs between modes** (`#0e5fc4` / `#6ba7f3`).
+  Never collapse it to one value: the light one is about 2.1:1 on a dark canvas.
 
 ## Typography
-Ten styles on the standard `TextTheme` (`lib/config/theme/custom_theme/text_theme.dart`), read as
-`context.texts`. `bodyMedium` (14/22) is the default. **Nothing renders below 10px, and nothing
-essential below 12px** — `labelSmall` is for non-essential metadata only.
+Eleven styles on the standard `TextTheme` (`lib/config/theme/custom_theme/text_theme.dart`), read
+as `context.texts`. `bodyMedium` (14/22) is the default and `displayLarge` (44/52) is the
+amount-entry figure. **Nothing renders below 10px, and nothing essential below 12px** — `labelSmall`
+is for non-essential metadata only.
 
-No `fontFamily` is set. The platform face costs no download on a low-end device, and the ramp is
-defined by size and weight so a brand typeface can be added later without retuning the layout.
+The ramp uses **two weights only**, `w500` for body and `w700` for headings and labels, because only
+those two are bundled. Asking for `w400` or `w600` silently synthesises and looks wrong.
 
 **The app respects the system font scale and never clamps it.** That makes every height in
 `AppSize` a *minimum*: use `ConstrainedBox(minHeight:)`, never `SizedBox(height:)`, on anything
@@ -50,8 +58,8 @@ containing text. No `maxLines: 1` on a label that carries meaning; wrap rather t
 
 ## Spacing
 `AppSize` (`lib/core/constants/app_size.dart`) holds the 4pt scale, radius (`radiusSm` 10,
-`radiusLg` 16, `radiusPill`), the 16/20/24 icon ramp and `touchTarget` 44. Gaps are
-`AppSize.h(n)` / `AppSize.w(n)`.
+`radiusMd` 12 for fields, `radiusLg` 16, `radiusXl` 20 for cards, `radiusPill`), the 16/20/24 icon
+ramp, `touchTarget` 44 and `cardShadow`. Gaps are `AppSize.h(n)` / `AppSize.w(n)`.
 
 ## Components that exist
 All in `lib/core/components/`.
@@ -59,7 +67,14 @@ All in `lib/core/components/`.
 | Need | Use |
 |---|---|
 | Screen shell: SafeArea, page padding, app bar, pinned CTA | `CustomScaffold` |
-| Any button | `CustomButton` (`primary` / `secondary` / `plain`) |
+| Any button | `CustomButton` (`primary` / `secondary` / `plain` / `text`) — always a pill |
+| Any text input | `CustomInputField` — never a raw `TextField` |
+| An amount field | `CustomInputField` with `AmountInputFormatter` |
+| A set of label/value facts | `SummaryCard` + `SummaryRow` |
+| The figure on an amount screen | `AmountDisplay`, with `QuickAmountChips` for presets |
+| A section title, with or without an action | `SectionHeader` |
+| An icon action under the balance | `QuickActionTile` inside a `QuickActionRow` |
+| A circle carrying an icon | `AppAvatar` |
 | Pending, Sent or Rejected state on a row | `StatusChip` |
 | Any amount of money on screen | `MoneyText` |
 | Spinner, skeleton, error, empty, pull-to-refresh body | `state_widgets.dart` |
@@ -70,6 +85,9 @@ All in `lib/core/components/`.
 - **A view file holds only its view.** Sub-widgets move to the feature's `presentation/widgets/`,
   grouped in one `<view_stem>_widgets.dart`; a widget two views share gets its own file.
 - **Public widget first**, with its one `///` line; private helpers below, undocumented.
+- **A shared component brings its own `Material`.** Anything using `InkWell` must wrap it, because a
+  caller may mount it outside a `Scaffold`. Put the label *inside* the ink, so the whole control is
+  the tap target rather than just its icon.
 
 ## Interaction and state
 - One primary CTA per screen; secondary actions are visually subordinate.

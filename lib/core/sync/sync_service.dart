@@ -119,7 +119,9 @@ class SyncServiceImpl implements SyncService {
       createdAt: DateTime.now(),
     );
     await _save([...actions(), action]);
-    unawaited(drain());
+    // Awaited, not fire-and-forget: a caller that also drained would otherwise
+    // spend two of the five attempts on one action.
+    await drain();
     return action;
   }
 

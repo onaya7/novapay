@@ -34,7 +34,9 @@ void main() {
   });
 
   test('same flavor with a different box is still a different config', () {
-    const other = FlavorConfig(
+    // A const instance is canonicalized, so the constructor never runs.
+    // ignore: prefer_const_constructors
+    final other = FlavorConfig(
       flavor: Flavor.development,
       hiveBoxName: 'some_other_box',
     );

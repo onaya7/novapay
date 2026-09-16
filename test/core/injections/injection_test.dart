@@ -11,6 +11,14 @@ import 'package:novapay/core/local_data/local_data_storage.dart';
 import 'package:novapay/core/local_data/secure_local_data_storage.dart';
 import 'package:novapay/core/network_info/network_info.dart';
 import 'package:novapay/core/sync/sync_service.dart';
+import 'package:novapay/features/savings/data/repositories/savings_repository_impl.dart';
+import 'package:novapay/features/savings/domain/repositories/savings_repository.dart';
+import 'package:novapay/features/savings/presentation/cubit/contribute_cubit.dart';
+import 'package:novapay/features/savings/presentation/cubit/create_goal_cubit.dart';
+import 'package:novapay/features/savings/presentation/cubit/savings_cubit.dart';
+import 'package:novapay/features/send_money/data/repositories/transfer_repository_impl.dart';
+import 'package:novapay/features/send_money/domain/repositories/transfer_repository.dart';
+import 'package:novapay/features/send_money/presentation/cubit/send_money_cubit.dart';
 import 'package:novapay/features/wallet/data/repositories/wallet_repository_impl.dart';
 import 'package:novapay/features/wallet/domain/repositories/wallet_repository.dart';
 import 'package:novapay/features/wallet/presentation/cubit/wallet_cubit.dart';
@@ -50,6 +58,21 @@ void main() {
     expect(sl<SyncService>(), isA<SyncServiceImpl>());
     expect(sl<WalletRepository>(), isA<WalletRepositoryImpl>());
     expect(sl<WalletCubit>(), isA<WalletCubit>());
+  });
+
+  test('resolves every feature graph, so no screen crashes on open', () {
+    expect(sl<TransferRepository>(), isA<TransferRepositoryImpl>());
+    expect(sl<SendMoneyCubit>(), isA<SendMoneyCubit>());
+    expect(sl<SavingsRepository>(), isA<SavingsRepositoryImpl>());
+    expect(sl<SavingsCubit>(), isA<SavingsCubit>());
+    expect(sl<CreateGoalCubit>(), isA<CreateGoalCubit>());
+    expect(sl<ContributeCubit>(), isA<ContributeCubit>());
+  });
+
+  test('a per-screen cubit is a factory, so a second visit starts clean', () {
+    expect(identical(sl<SendMoneyCubit>(), sl<SendMoneyCubit>()), isFalse);
+    expect(identical(sl<CreateGoalCubit>(), sl<CreateGoalCubit>()), isFalse);
+    expect(identical(sl<ContributeCubit>(), sl<ContributeCubit>()), isFalse);
   });
 
   test('resolves both storages', () {

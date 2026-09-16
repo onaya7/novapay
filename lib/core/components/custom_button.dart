@@ -3,7 +3,7 @@ import 'package:novapay/config/theme/app_theme_colors.dart';
 import 'package:novapay/core/constants/app_color.dart';
 import 'package:novapay/core/constants/app_size.dart';
 
-enum ButtonVariant { primary, secondary, plain }
+enum ButtonVariant { primary, secondary, plain, text }
 
 /// The app's only button; it carries the disabled palette and the loading
 /// semantics so no call site has to remember them.
@@ -30,8 +30,12 @@ class CustomButton extends StatelessWidget {
     final colors = AppThemeColors.of(context);
     final enabled = onPressed != null && !isLoading;
 
+    final isText = variant == ButtonVariant.text;
+
     final button = ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: AppSize.buttonMinHeight),
+      constraints: BoxConstraints(
+        minHeight: isText ? AppSize.touchTarget : AppSize.buttonMinHeight,
+      ),
       child: FilledButton(
         onPressed: enabled ? onPressed : null,
         style: FilledButton.styleFrom(
@@ -39,14 +43,12 @@ class CustomButton extends StatelessWidget {
           foregroundColor: _foreground(colors),
           // Disabled is a neutral fill; brand at low opacity reads as a
           // rendering fault in dark mode.
-          disabledBackgroundColor: colors.fill,
+          disabledBackgroundColor: isText ? Colors.transparent : colors.fill,
           disabledForegroundColor: colors.subtext,
           elevation: 0,
           textStyle: Theme.of(context).textTheme.titleMedium,
           padding: const EdgeInsets.symmetric(horizontal: AppSize.lg),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppSize.radiusSm),
-          ),
+          shape: const StadiumBorder(),
         ),
         child: isLoading
             ? Semantics(
@@ -63,13 +65,13 @@ class CustomButton extends StatelessWidget {
   Color _background(AppThemeColors colors) => switch (variant) {
     ButtonVariant.primary => colors.primary,
     ButtonVariant.secondary => colors.fill,
-    ButtonVariant.plain => Colors.transparent,
+    ButtonVariant.plain || ButtonVariant.text => Colors.transparent,
   };
 
   Color _foreground(AppThemeColors colors) => switch (variant) {
     ButtonVariant.primary => AppColor.onBrand,
     ButtonVariant.secondary => colors.textHeading,
-    ButtonVariant.plain => colors.primaryStrong,
+    ButtonVariant.plain || ButtonVariant.text => colors.primaryStrong,
   };
 }
 

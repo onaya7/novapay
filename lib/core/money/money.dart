@@ -123,6 +123,11 @@ Money sumMoney(Iterable<Money> amounts) {
   return Money.fromKobo(total);
 }
 
+/// What may actually be spent. Defined once, because a second copy of this
+/// subtraction is how two screens start disagreeing about the same wallet.
+Money availableBalance({required Money confirmed, required Money pending}) =>
+    Money.fromKobo(confirmed.kobo - pending.kobo);
+
 /// Throws rather than coercing, since jsonDecode returns `num`.
 int koboFromJson(Object? value) {
   if (value is int) return value;

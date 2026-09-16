@@ -9,7 +9,9 @@ import '../../helpers/helpers.dart';
 void main() {
   group('LoadingIndicator', () {
     testWidgets('spins at the size it is given', (tester) async {
-      await tester.pumpApp(const LoadingIndicator(size: 32));
+      // A const instance is canonicalized, so the constructor never runs.
+      // ignore: prefer_const_constructors
+      await tester.pumpApp(LoadingIndicator(size: 32));
 
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
       expect(
@@ -22,7 +24,9 @@ void main() {
   group('SkeletonBox', () {
     testWidgets('reserves the shape the content will take', (tester) async {
       await tester.pumpApp(
-        const Center(child: SkeletonBox(height: 24, width: 120)),
+        // A const instance is canonicalized, so the constructor never runs.
+        // ignore: prefer_const_constructors
+        Center(child: SkeletonBox(height: 24, width: 120)),
       );
 
       final box = tester.widget<Container>(find.byType(Container));

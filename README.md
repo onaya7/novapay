@@ -2,7 +2,7 @@
 
 **Scenario:** FirstBank NovaPay → NovaWallet. Two journeys, sending money and contributing to a NovaSave goal, built for a market where a large share of users are on low-end Android with patchy connectivity.
 
-> **Status: partly built, and this document says which parts.** The money layer, the offline queue, the stand-in backend and the design system are implemented and under test. The three screens are in progress. Everything the design specifies beyond what is built is marked **`[DESIGN — not built]`** where it appears, because a document that quietly describes code that does not exist is worth less than no document.
+> **Status: the brief's scope is built.** The money layer, the offline queue, the stand-in backend, the design system and all three screens are implemented and under test. Everything the design specifies *beyond* the brief is marked **`[DESIGN — not built]`** where it appears, because a document that quietly describes code that does not exist is worth less than no document.
 
 > ## The design in one paragraph
 > Every money-moving action is **written to a local queue before any network call**, so the online and offline paths are the same code and "offline" is not a branch. Each action carries a **client-generated idempotency key that is stable across retries**, and the backend keeps a **persisted** ledger keyed on it. That combination is what makes replay safe: the queue may send a duplicate, and the server collapses it. The honest claim is at-least-once delivery plus server-side deduplication, which is what "exactly once" means in practice.
@@ -11,7 +11,7 @@
 
 ## Implementation status
 
-`254 tests, 100% line coverage` `[VERIFIED: fvm flutter test --coverage]`
+`492 tests, 100% line coverage` `[VERIFIED: fvm flutter test --coverage]`
 
 | Area | Status | Where |
 |---|---|---|
@@ -21,8 +21,10 @@
 | Storage — Hive CE and secure storage behind interfaces, flavor-scoped | **Built** | [`lib/core/local_data/`](lib/core/local_data/) |
 | DI, reachability, error translation | **Built** | [`lib/core/injections/`](lib/core/injections/), [`lib/core/network_info/`](lib/core/network_info/), [`lib/utils/`](lib/utils/) |
 | Design system — tokens, theme, shared components | **Built** | [`lib/config/theme/`](lib/config/theme/), [`lib/core/components/`](lib/core/components/) |
-| Wallet home · Send Money · NovaSave goal | **In progress** | — |
-| Leases, persisted backoff with jitter, `unresolved` state, available-vs-confirmed balance, per-attempt trace id | **`[DESIGN — not built]`** | Argued below; deliberately not built yet |
+| Wallet home — balance, available vs pending, merged activity, pull-to-refresh | **Built** | [`lib/features/wallet/`](lib/features/wallet/) |
+| Send Money — recipient → amount → confirm, offline queueing, enqueue funds guard | **Built** | [`lib/features/send_money/`](lib/features/send_money/) |
+| NovaSave goal — create, contribute, integer-basis-point progress | **Built** | [`lib/features/savings/`](lib/features/savings/) |
+| Leases, persisted backoff with jitter, `unresolved` state, per-attempt trace id | **`[DESIGN — not built]`** | Argued below; deliberately not built yet |
 
 The last row is the honest one. Those are the right answers for a production wallet and the reasoning for each is kept below, because the reasoning is the deliverable. They are not in the code, and this table is the only place that needs checking to know that.
 
@@ -81,7 +83,7 @@ fvm flutter run --flavor production --target lib/main_production.dart
 ```
 
 ```sh
-fvm flutter test --coverage        # 254 tests, 100% line coverage
+fvm flutter test --coverage        # 492 tests, 100% line coverage
 fvm flutter analyze lib test       # exits non-zero on info, so treat any issue as a failure
 fvm dart format lib test
 fvm dart run bloc_tools:bloc lint . # the bloc rules live under a key `flutter analyze` ignores
@@ -448,7 +450,7 @@ Per-type lanes are the obvious alternative and are rejected: they break funds or
 
 ### Two balances
 
-**`[DESIGN — not built]`** — `SyncService.pendingKobo()` exists and returns the total still owed, so the derived number is one subtraction away. The enqueue guard is not written, and lands with the Send Money screen.
+**Built.** `availableBalance(confirmed:, pending:)` in `lib/core/money/money.dart` is the single definition of the subtraction, so the wallet and the Send Money screen cannot drift apart on it. The enqueue guard is in `TransferRepositoryImpl.queue`.
 
 | Number | Owner | Rule |
 |---|---|---|
@@ -495,20 +497,27 @@ A three-layer token model is used: `Primitives` → `Semantic` → components. *
 | Token | Light | Dark |
 |---|---|---|
 | `brand/primary` | `#1174ed` | `#1174ed` |
-| `brand/primary-strong` | `#0e5fc4` | `#0e5fc4` |
+| `brand/primary-strong` | `#0e5fc4` | `#6ba7f3` |
+| `brand/subtle` | `#e8f1fd` | `#08356e` |
 | `bg/canvas` | `#faf9f6` | `#1f1f1f` |
 | `bg/surface` | `#ffffff` | `#292929` |
 | `bg/subtle` | `#f3f5f7` | `#3d3f47` |
+| `border/subtle` | `#eaeaea` | `#3e3e3e` |
 | `text/primary` | `#000000` | `#ffffff` |
 | `text/secondary` | `#4a4a49` | `#a9a9a9` |
 | `text/tertiary` | `#686766` | `#8f8f8f` |
 | `feedback/success` | `#08b142` | `#08b142` |
+| `feedback/success-surface` | `#e3f7e9` | `#0a7d2e` at 16% |
 | `feedback/warning` | `#ff8f00` | `#ffb300` |
 | `feedback/danger` | `#fc2d2d` | `#fc2d2d` |
 
-Scale: spacing on a 4pt rhythm (`4 8 12 16 20 24 32 40 48 64`), radius favoring 10 and 16, icons at **16 / 20 / 24 only**, minimum touch target **44**. Type is a ten-style ramp with `Body/Medium` 14/22 as the default.
+**`brand/primary-strong` is the only brand value that moves between modes, and it has to.** It is brand used as a *foreground*. The light value on a dark canvas measures about **2.1:1** — not a near miss, an unreadable one. An earlier build shipped a single shared value; a test now asserts the two modes differ, so it cannot come back. `[VERIFIED]`
 
-**No custom font is bundled.** A typeface is 100–400KB per weight before it renders a single pixel, and this app targets a device and a network where that is not free. The platform face costs nothing, is already hinted for the screen, and a ramp defined by size and weight survives a font swap where hand-tuned letter spacing would not. `[JUDGMENT]`
+Scale: spacing on a 4pt rhythm (`4 8 12 16 20 24 32 40 48 64`), radius at **10 / 12 / 16 / 20** plus a pill, icons at **16 / 20 / 24 only**, minimum touch target **44**. Type is an eleven-style ramp with `Body/Medium` 14/22 as the default.
+
+**One typeface, two weights.** Plus Jakarta Sans Medium (500) and Bold (700) are bundled from `assets/fonts/`, under **SIL Open Font License 1.1** — the license text ships beside them. Two weights is ~258KB, which is the whole budget: no Light, no Italic, no variable axis, because nothing in the ramp uses them and this app targets a device and a network where every kilobyte is a real cost. `[VERIFIED: file sizes on disk]`
+
+**Exactly one raised surface.** The balance card carries a soft shadow; everything else is flat and separated by `border/subtle`. Elevation used as decoration makes nothing look important because everything does.
 
 **Never branch on `Theme.of(context).brightness` to pick a color.** An `isDark ? a : b` pair is a semantic role that has not been named yet; add the field instead. No raw `Color(0x...)` literals in widgets.
 
@@ -548,7 +557,8 @@ The brief makes this non-negotiable `[SOURCE: brief §2.2]`. Contrast is a measu
 
 ### Contrast rules that constrain the layout
 
-- **White on `#1174ed` is 4.43:1 — below the 4.5:1 AA threshold.** The brand color is deliberately unchanged. It is therefore legal only for large text: **≥24px, or ≥18.66px bold**. In practice that means the balance figure and the primary CTA label, and nothing else. Any smaller white-on-blue text uses `brand/primary-strong` `#0e5fc4` at 6.08:1.
+- **White on `#1174ed` is 4.43:1 — below the 4.5:1 AA threshold.** The brand color is deliberately unchanged. It is therefore legal only for large text: **≥24px, or ≥18.66px bold**. In practice that means the balance figure and the primary CTA label, and nothing else.
+- **`brand/primary-strong` is a foreground, so it moves with the mode.** `#0e5fc4` is 6.08:1 on a light canvas and about 2.1:1 on a dark one; dark uses `#6ba7f3`. A brand value that does not move is the trap here, because it passes every light-mode sweep.
 - **Never `text/tertiary` or `text/secondary` on `bg/subtle` in dark.** Measured 3.25:1 and 4.47:1 — both fail, and the second fails by 0.03, which is not a rounding error to wave through. Put them on `bg/canvas` or `bg/surface`.
 - **Text on brand blue or on imagery binds `text/on-brand`, never `text/inverse`.** `text/inverse` resolves to *black* in dark mode, so a label on a card that stays blue in both themes would go black on blue.
 - A hardcoded `Colors.black` passes every light-mode contrast sweep and fails the instant a dark theme exists. Unbound foregrounds are treated as a contrast defect in review, not just a style violation.
@@ -586,7 +596,7 @@ The target device is a low-end Android phone, not the simulator on a fast laptop
 
 ## Testing
 
-`254 tests, 100% line coverage` `[VERIFIED]`. The 100% figure is a CI gate, not an achievement — see [tests that lie](#tests-that-lie).
+`492 tests, 100% line coverage` `[VERIFIED]`. The 100% figure is a CI gate, not an achievement — see [tests that lie](#tests-that-lie).
 
 ### The matrix
 
@@ -595,8 +605,8 @@ The target device is a low-end Android phone, not the simulator on a fast laptop
 | **Unit** | `Money` parse, format, sum, basis points. `PendingAction` transitions. Server services and repositories | Built |
 | **Component** | Buttons, chips, scaffold, money text, empty and error states — including their semantics | Built |
 | **Behavioral** | Queue against a real `LocalDataStorage` and a real server: offline, reconnect, retry, restart, replay | Built |
-| **Widget** | Send Money recipient → amount → confirm. NovaSave contribute. Pending chip while offline | With the screens |
-| **Integration** | offline → enqueue → kill app → relaunch → reconnect → **exactly one send**, on a device | With the screens |
+| **Widget** | Every screen and every state: the three send steps, goal create and contribute, the Pending chip, the empty and error states | Built |
+| **Integration** | offline → enqueue → kill app → relaunch → reconnect → **exactly one send**, on a device | **`[DESIGN — not built]`** |
 
 ### The tests that actually catch a regression
 
@@ -605,7 +615,7 @@ The target device is a low-end Android phone, not the simulator on a fast laptop
 3. **Interrupted send is retried, not lost. Built** — *"a send interrupted mid-flight is retried, not lost"*, plus *"recoverInterrupted requeues a stranded send"*.
 4. **Money round-trip. Built** — `parse(format(k)) == k` across `0, 1, 29, 99, 100, 101` and large values, plus the inputs users actually produce: `".5"`, `"1."`, `"1.005"`, `"₦1,000.00"`, and a twenty-digit paste. Plus exact-equality summation over a list.
 5. **Concurrent trigger race. `[DESIGN — not built]`** — fire connectivity-regained and app-resume in the same microtask, with the API gated on a `Completer` the test controls. This is what would catch the check-then-set-across-an-await bug. The future-chain mutex that fixes that bug **is** in the code; the test pinning it is not, and it **must** use a manual `Completer` — `Future.delayed` makes it pass by accident.
-6. **The balance rule. `[DESIGN — not built]`** — with a ₦20,000 balance, queue three transfers of ₦10,000 offline and assert the **third is refused at enqueue**, not accepted and later bounced. Lands with the Send Money screen.
+6. **The balance rule. Built** — *"three offline transfers of half the balance: third refused"*. Queued offline, the third is refused **at enqueue** rather than accepted with a cheerful Pending and bounced on reconnect. Offline over-commitment is the most common real bug in this feature.
 
 A `Clock` is not yet injected. Once backoff exists it must be, because backoff tested against real `Future.delayed` is slow and flaky, and a flaky suite gets deleted. **`[DESIGN — not built]`**
 
@@ -631,7 +641,7 @@ Every judgment the brief's ambiguities forced.
 | 3 | Pending spend reduces available balance and is enforced at enqueue | If over-commitment is acceptable, the enqueue guard can be dropped, but offline users will see failed transfers on reconnect |
 | 4 | Idempotency keys are retained server-side for at least 24h | Entries queued longer than the window lose deduplication and must escalate to a user decision |
 | 5 | One isolate owns the queue | A background-isolate enqueue path needs a separate inbox box; Hive CE cannot coordinate across isolates |
-| 6 | The platform face is acceptable for a brand-led product | If a licensed brand typeface is required, the ramp is defined by size and weight so it swaps in without retuning the layout |
+| 6 | An OFL typeface is acceptable where a proprietary brand face would normally sit | If a licensed brand face is mandated, the ramp is defined by size and weight, so it swaps in by changing one `fontFamily` without retuning the layout |
 
 ---
 

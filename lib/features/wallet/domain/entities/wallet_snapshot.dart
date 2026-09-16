@@ -21,8 +21,8 @@ abstract class WalletSnapshot with _$WalletSnapshot {
 
   Money get pending => Money.fromKobo(pendingKobo);
 
-  /// What the customer may actually spend; committed money is already gone.
-  Money get available => Money.fromKobo(confirmedKobo - pendingKobo);
+  Money get available =>
+      availableBalance(confirmed: confirmed, pending: pending);
 
   bool get hasPending => pendingKobo > 0;
 

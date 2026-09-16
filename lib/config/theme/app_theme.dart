@@ -25,6 +25,7 @@ abstract class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: brightness,
+      fontFamily: TTextTheme.fontFamily,
       colorScheme:
           ColorScheme.fromSeed(
             seedColor: AppColor.brand,
@@ -61,8 +62,8 @@ abstract class AppTheme {
           vertical: AppSize.smd,
         ),
         hintStyle: textTheme.bodyMedium?.copyWith(color: colors.subtext),
-        border: _border(colors.divider),
-        enabledBorder: _border(colors.divider),
+        border: _border(colors.border),
+        enabledBorder: _border(colors.border),
         focusedBorder: _border(colors.primary, width: 1.5),
         errorBorder: _border(AppColor.danger),
         focusedErrorBorder: _border(AppColor.danger, width: 1.5),
@@ -77,7 +78,7 @@ abstract class AppTheme {
 
   static OutlineInputBorder _border(Color color, {double width = 1}) =>
       OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppSize.radiusSm),
+        borderRadius: BorderRadius.circular(AppSize.radiusMd),
         borderSide: BorderSide(color: color, width: width),
       );
 }

@@ -31,19 +31,30 @@ result.fold(
 );
 ```
 
-In the UI, branch with `.when` / `.maybeWhen` / `.whenOrNull`, **never** `switch` or `is`. Other
-layers, such as a router redirect or a Dio interceptor, may use `switch` and `is` freely.
+**freezed 4 removed `.when` / `.map`.** Branch with a `switch` over the sealed union and Dart
+patterns — that is now the only form, and it is exhaustiveness-checked by the compiler:
+
+```dart
+switch (state) {
+  WalletLoading() => const _Loading(),
+  WalletFailure(:final message) => _Failure(message: message),
+  WalletReady(:final snapshot) => _Ready(snapshot: snapshot),
+}
+```
+
+A multi-step form is the one shape that does not fit `initial/loading/success/error`. There, the
+union carries the **submission phase** and a domain entity carries the form, so the fields are not
+duplicated across variants — see `SendMoneyState` and `TransferDraft`.
 
 ## Registration and lifetime
-- Annotate blocs and cubits `@lazySingleton`.
-- Register each one in `lib/app/presentation/view/app_bloc_provider.dart` as
-  `BlocProvider<T>.value(value: sl<T>())`. Singletons are what let a multi-screen wizard keep its
-  state.
-- Because cubits live as long as the app, a cubit holding per-screen state (a search query,
-  filters, a selection) exposes `reset()`, and the screen calls it from `initState`.
+- Annotate a cubit `@injectable`, so each screen gets a fresh one, and provide it with
+  `BlocProvider(create: (_) => sl<T>()..)` in that screen's page widget.
+- **Per-screen state must not be a singleton.** A `SendMoneyCubit` that outlived its screen would
+  open the next transfer on the previous draft. Reach for `@lazySingleton` only for state that is
+  genuinely app-wide, such as a session, and clear it on sign-out.
+- A cubit that follows a stream cancels its subscription in `close()`.
 - Cache the raw server data in the cubit and derive filtered or sorted lists at emit time. Don't
   overwrite the cache with a filtered copy.
-- Every singleton that holds user data must be cleared on sign-out.
 
 ## bloc_lint rules: `flutter analyze` does NOT catch these
 `analysis_options.yaml` includes `package:bloc_lint/recommended.yaml`, but those rules live under a
