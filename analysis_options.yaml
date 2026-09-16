@@ -2,7 +2,13 @@ include:
   - package:very_good_analysis/analysis_options.yaml
   - package:bloc_lint/recommended.yaml
 analyzer:
+  errors:
+    # UseCase and StreamUseCase are deliberate one-member contracts.
+    one_member_abstracts: ignore
   exclude:
+    - '**/*.freezed.dart'
+    - '**/*.g.dart'
+    - 'lib/**.config.dart'
     - lib/l10n/gen/*
     - build/**
     - android/**

@@ -114,5 +114,12 @@ app.*.map.json
 # Generated l10n files
 lib/l10n/gen/
 
+# build_runner generated files
+# NOTE: lib/gen/*.gen.dart (flutter_gen) does NOT match these patterns and is
+# intentionally tracked — regenerate and commit it after changing assets.
+*.g.dart
+*.freezed.dart
+*.config.dart
+
 # Presentation artifacts
 docs/*.pptx

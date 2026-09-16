@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(fvm flutter analyze:*)",
+      "Bash(fvm flutter test:*)",
+      "Bash(fvm flutter pub get:*)",
+      "Bash(fvm flutter gen-l10n:*)",
+      "Bash(fvm dart format:*)",
+      "Bash(fvm dart fix:*)",
+      "Bash(fvm dart pub get:*)",
+      "Bash(fvm dart run build_runner:*)",
+      "Bash(fvm dart run bloc_tools:bloc lint:*)",
+      "Bash(fvm --version)",
+      "Bash(very_good test:*)"
+    ],
+    "ask": [
+      "Bash(fvm flutter build:*)",
+      "Bash(fvm use:*)",
+      "Bash(git push:*)"
+    ]
+  },
+  "extraKnownMarketplaces": {
+    "flutter-agent-kit": {
+      "source": {
+        "source": "github",
+        "repo": "onaya7/flutter-agent-kit"
+      },
+      "autoUpdate": true
+    }
+  },
+  "enabledPlugins": {
+    "flutter-kit@flutter-agent-kit": true
+  }
+}
