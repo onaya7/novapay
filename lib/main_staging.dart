@@ -1,6 +1,14 @@
 import 'package:novapay/app/app.dart';
 import 'package:novapay/bootstrap.dart';
+import 'package:novapay/config/flavor/flavor.dart';
+import 'package:novapay/config/flavor/flavor_config.dart';
 
 Future<void> main() async {
-  await bootstrap(() => const App());
+  await bootstrap(
+    const FlavorConfig(
+      flavor: Flavor.staging,
+      hiveBoxName: 'novapay_staging_box',
+    ),
+    () => const App(),
+  );
 }

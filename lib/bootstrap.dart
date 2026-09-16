@@ -3,6 +3,9 @@ import 'dart:developer';
 
 import 'package:bloc/bloc.dart';
 import 'package:flutter/widgets.dart';
+import 'package:hive_ce_flutter/hive_flutter.dart';
+import 'package:novapay/config/flavor/flavor_config.dart';
+import 'package:novapay/core/injections/injection.dart';
 
 class AppBlocObserver extends BlocObserver {
   const new();
@@ -20,14 +23,26 @@ class AppBlocObserver extends BlocObserver {
   }
 }
 
-Future<void> bootstrap(FutureOr<Widget> Function() builder) async {
+/// Step order is load-bearing: the box opens before the container resolves it.
+Future<void> bootstrap(
+  FlavorConfig config,
+  FutureOr<Widget> Function() builder,
+) async {
+  WidgetsFlutterBinding.ensureInitialized();
+
   FlutterError.onError = (details) {
     log(details.exceptionAsString(), stackTrace: details.stack);
   };
 
-  Bloc.observer = const AppBlocObserver();
+  await Hive.initFlutter();
+  await Hive.openBox<dynamic>(config.hiveBoxName);
 
-  // Add cross-flavor configuration here
+  if (!sl.isRegistered<FlavorConfig>()) {
+    sl.registerSingleton<FlavorConfig>(config);
+  }
+  await configureDependencies();
+
+  Bloc.observer = const AppBlocObserver();
 
   runApp(await builder());
 }
