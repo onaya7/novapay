@@ -269,15 +269,17 @@ class ActivityRow extends StatelessWidget {
                   '${item.occurredAt.dayLabel} · ${item.occurredAt.timeLabel}',
                   style: texts.bodySmall?.copyWith(color: colors.subtext),
                 ),
-                if (item.needsChip) ...[
+                if (_chipFor(item.status) case (final label, final tone)) ...[
                   AppSize.h(AppSize.sm),
-                  StatusChip(
-                    label: item.status == ActivityStatus.failed
-                        ? 'Not sent'
-                        : 'Pending',
-                    tone: item.status == ActivityStatus.failed
-                        ? ChipTone.danger
-                        : ChipTone.pending,
+                  StatusChip(label: label, tone: tone),
+                ],
+                if (item.note case final note?) ...[
+                  AppSize.h(AppSize.sm),
+                  Text(
+                    note,
+                    style: texts.bodySmall?.copyWith(
+                      color: colors.textSubheading,
+                    ),
                   ),
                 ],
               ],
@@ -296,6 +298,16 @@ class ActivityRow extends StatelessWidget {
     );
   }
 }
+
+/// Null for a settled row: a list where every row is badged has no signal in
+/// the badge. Word and tone come from one place so they cannot drift apart —
+/// and an unknown outcome is not a failure, so it is not painted like one.
+(String, ChipTone)? _chipFor(ActivityStatus status) => switch (status) {
+  ActivityStatus.settled => null,
+  ActivityStatus.pending => ('Pending', ChipTone.pending),
+  ActivityStatus.rejected => ('Not sent', ChipTone.danger),
+  ActivityStatus.unresolved => ('Unresolved', ChipTone.pending),
+};
 
 class _Avatar extends StatelessWidget {
   const _Avatar({required this.item});

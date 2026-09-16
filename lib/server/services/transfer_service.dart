@@ -1,4 +1,5 @@
 import 'package:injectable/injectable.dart';
+import 'package:novapay/core/time/clock.dart';
 import 'package:novapay/server/api_exception.dart';
 import 'package:novapay/server/models/transaction.dart';
 import 'package:novapay/server/repositories/account_repository.dart';
@@ -18,11 +19,17 @@ abstract class TransferService {
 
 @LazySingleton(as: TransferService)
 class TransferServiceImpl implements TransferService {
-  TransferServiceImpl(this._accounts, this._transactions, this._idempotency);
+  TransferServiceImpl(
+    this._accounts,
+    this._transactions,
+    this._idempotency,
+    this._clock,
+  );
 
   final AccountRepository _accounts;
   final TransactionRepository _transactions;
   final IdempotencyRepository _idempotency;
+  final Clock _clock;
 
   /// A key that has already been applied is a replay, so the original entry is
   /// returned without moving money again. That is what a real idempotent
@@ -51,7 +58,7 @@ class TransferServiceImpl implements TransferService {
       id: idempotencyKey,
       title: 'Transfer to $recipient',
       amountKobo: -amountKobo,
-      occurredAt: DateTime.now(),
+      occurredAt: _clock.now(),
     );
 
     await _accounts.setBalanceKobo(balance - amountKobo);

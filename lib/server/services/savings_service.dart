@@ -1,4 +1,5 @@
 import 'package:injectable/injectable.dart';
+import 'package:novapay/core/time/clock.dart';
 import 'package:novapay/server/api_exception.dart';
 import 'package:novapay/server/models/savings_goal.dart';
 import 'package:novapay/server/models/transaction.dart';
@@ -33,12 +34,14 @@ class SavingsServiceImpl implements SavingsService {
     this._accounts,
     this._transactions,
     this._idempotency,
+    this._clock,
   );
 
   final SavingsGoalRepository _goals;
   final AccountRepository _accounts;
   final TransactionRepository _transactions;
   final IdempotencyRepository _idempotency;
+  final Clock _clock;
 
   @override
   Future<SavingsGoal> createGoal({
@@ -95,7 +98,7 @@ class SavingsServiceImpl implements SavingsService {
         id: idempotencyKey,
         title: 'Saved to ${goal.name}',
         amountKobo: -amountKobo,
-        occurredAt: DateTime.now(),
+        occurredAt: _clock.now(),
       ),
     );
     await _idempotency.record(idempotencyKey);

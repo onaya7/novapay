@@ -29,7 +29,7 @@ void main() {
     test('only the exceptions are annotated', () {
       expect(_item().needsChip, isFalse);
       expect(_item(status: ActivityStatus.pending).needsChip, isTrue);
-      expect(_item(status: ActivityStatus.failed).needsChip, isTrue);
+      expect(_item(status: ActivityStatus.unresolved).needsChip, isTrue);
     });
   });
 

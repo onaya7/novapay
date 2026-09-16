@@ -143,14 +143,30 @@ void main() {
       expect(find.text('Pending'), findsOneWidget);
     });
 
-    testWidgets('an exhausted row says what happened, not Failed', (
-      tester,
-    ) async {
+    testWidgets('a refused row says it did not go, and why', (tester) async {
       await tester.pumpApp(
-        ActivityRow(item: _item(status: ActivityStatus.failed)),
+        ActivityRow(
+          item: _item(status: ActivityStatus.rejected)
+              .copyWith(failureMessage: 'Not enough in your wallet'),
+        ),
       );
 
       expect(find.text('Not sent'), findsOneWidget);
+      expect(find.text('Not enough in your wallet'), findsOneWidget);
+    });
+
+    testWidgets('an unknown outcome never says Failed', (tester) async {
+      await tester.pumpApp(
+        ActivityRow(item: _item(status: ActivityStatus.unresolved)),
+      );
+
+      expect(find.text('Unresolved'), findsOneWidget);
+      expect(find.textContaining('Failed'), findsNothing);
+      // The customer is told to check, not invited to send it again.
+      expect(
+        find.textContaining("We couldn't confirm this transfer"),
+        findsOneWidget,
+      );
     });
 
     testWidgets('money arriving points the other way and is signed', (

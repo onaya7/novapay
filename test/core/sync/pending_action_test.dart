@@ -25,48 +25,163 @@ void main() {
       expect(PendingActionStatus.queued.isPending, isTrue);
       expect(PendingActionStatus.sending.isPending, isTrue);
       expect(PendingActionStatus.done.isPending, isFalse);
-      expect(PendingActionStatus.failed.isPending, isFalse);
+      expect(PendingActionStatus.rejected.isPending, isFalse);
+      expect(PendingActionStatus.unresolved.isPending, isFalse);
+    });
+
+    test('an outcome is terminal; being in flight is not', () {
+      expect(PendingActionStatus.done.isTerminal, isTrue);
+      expect(PendingActionStatus.rejected.isTerminal, isTrue);
+      expect(PendingActionStatus.unresolved.isTerminal, isTrue);
+      expect(PendingActionStatus.queued.isTerminal, isFalse);
+      expect(PendingActionStatus.sending.isTerminal, isFalse);
+    });
+
+    test('an unknown outcome still holds the money; a refusal releases it', () {
+      // Releasing the hold on an unknown outcome is a double-spend through the
+      // UI: the customer sees it come back, spends it, then the send lands.
+      expect(PendingActionStatus.unresolved.holdsFunds, isTrue);
+      expect(PendingActionStatus.queued.holdsFunds, isTrue);
+      expect(PendingActionStatus.sending.holdsFunds, isTrue);
+      expect(PendingActionStatus.rejected.holdsFunds, isFalse);
+      expect(PendingActionStatus.done.holdsFunds, isFalse);
+    });
+  });
+
+  group('runnability', () {
+    final now = DateTime.utc(2026, 9, 16, 12);
+
+    test('a fresh action runs at once', () {
+      expect(action().isRunnableAt(now), isTrue);
+    });
+
+    test('a terminal action never runs again', () {
+      expect(
+        action(status: PendingActionStatus.rejected).isRunnableAt(now),
+        isFalse,
+      );
+      expect(
+        action(status: PendingActionStatus.unresolved).isRunnableAt(now),
+        isFalse,
+      );
+      expect(action(status: PendingActionStatus.done).isRunnableAt(now), false);
+    });
+
+    test('a backoff window holds it until the deadline passes', () {
+      final waiting = action().copyWith(
+        nextAttemptAt: now.add(const Duration(minutes: 5)),
+      );
+
+      expect(waiting.isRunnableAt(now), isFalse);
+      expect(
+        waiting.isRunnableAt(now.add(const Duration(minutes: 4))),
+        isFalse,
+      );
+      expect(waiting.isRunnableAt(now.add(const Duration(minutes: 5))), isTrue);
+      expect(waiting.isRunnableAt(now.add(const Duration(minutes: 6))), isTrue);
     });
   });
 
   group('transitions', () {
-    test('sending does not spend an attempt', () {
-      final sending = action().sending();
+    final now = DateTime.utc(2026, 9, 16, 12);
+
+    test('starting an attempt spends one and records a trace id', () {
+      final sending = action().sending('attempt-1');
       expect(sending.status, PendingActionStatus.sending);
-      expect(sending.attemptCount, 0);
+      expect(sending.attemptCount, 1);
+      expect(sending.attemptId, 'attempt-1');
     });
 
-    test('success finishes it', () {
-      final done = action(status: PendingActionStatus.sending).succeeded();
+    test('the trace id changes per attempt while the key does not', () {
+      final first = action().sending('attempt-1');
+      final second = first.ambiguousAttempt(now).sending('attempt-2');
+
+      expect(first.id, second.id);
+      expect(first.attemptId, isNot(second.attemptId));
+    });
+
+    test('success finishes it and clears any backoff', () {
+      final done = action(
+        status: PendingActionStatus.sending,
+        attemptCount: 1,
+      ).copyWith(nextAttemptAt: now).succeeded();
+
       expect(done.status, PendingActionStatus.done);
-      expect(done.attemptCount, 1);
+      expect(done.nextAttemptAt, isNull);
     });
 
-    test('a failure requeues while there is budget left', () {
-      final again = action(attemptCount: 1).failedAttempt();
+    test('a refusal is terminal and keeps the reason', () {
+      final refused = action(status: PendingActionStatus.sending)
+          .refused('Not enough in your wallet');
+
+      expect(refused.status, PendingActionStatus.rejected);
+      expect(refused.failureMessage, 'Not enough in your wallet');
+      expect(refused.sawAmbiguousAttempt, isFalse);
+    });
+
+    test('an ambiguous attempt requeues behind a backoff', () {
+      final again = action(attemptCount: 1).ambiguousAttempt(now);
+
       expect(again.status, PendingActionStatus.queued);
-      expect(again.attemptCount, 2);
+      expect(again.sawAmbiguousAttempt, isTrue);
+      expect(again.nextAttemptAt, isNotNull);
+      expect(again.nextAttemptAt!.isAfter(now), isTrue);
     });
 
-    test('the queue gives up rather than spinning forever', () {
-      final exhausted = action(attemptCount: kPendingActionMaxAttempts - 1)
-          .failedAttempt();
-      expect(exhausted.status, PendingActionStatus.failed);
-      expect(exhausted.attemptCount, kPendingActionMaxAttempts);
+    test('the backoff grows with each attempt', () {
+      Duration waitAfter(int attempts) =>
+          action(attemptCount: attempts)
+              .ambiguousAttempt(now)
+              .nextAttemptAt!
+              .difference(now);
+
+      expect(waitAfter(2) > waitAfter(1), isTrue);
+      expect(waitAfter(3) > waitAfter(2), isTrue);
     });
 
-    test('a send interrupted by a crash goes back to the queue', () {
-      // Safe to resend, because the id is the idempotency key.
+    test('the backoff is capped, so a long outage stays reachable', () {
+      final wait = action(attemptCount: 4)
+          .ambiguousAttempt(now)
+          .nextAttemptAt!
+          .difference(now);
+
+      // Capped value plus at most a quarter of it as jitter.
+      expect(wait <= kPendingActionMaxBackoff * 1.25, isTrue);
+    });
+
+    test('an exhausted budget hands it to the customer, not to a retry', () {
+      final exhausted = action(attemptCount: kPendingActionMaxAttempts)
+          .ambiguousAttempt(now);
+
+      expect(exhausted.status, PendingActionStatus.unresolved);
+      expect(exhausted.sawAmbiguousAttempt, isTrue);
+      // No deadline: nothing will pick it up again on its own.
+      expect(exhausted.nextAttemptAt, isNull);
+    });
+
+    test('a send interrupted by a crash goes back, and is marked unknown', () {
+      // Safe to resend, because the id is the idempotency key. It was
+      // transmitted, so the outcome is unknown rather than known-not-sent.
       final stuck = action(status: PendingActionStatus.sending);
       expect(stuck.recovered().status, PendingActionStatus.queued);
-      expect(stuck.recovered().attemptCount, 0);
+      expect(stuck.recovered().sawAmbiguousAttempt, isTrue);
+    });
+
+    test('the ambiguous flag is one-way', () {
+      final flagged = action(status: PendingActionStatus.sending)
+          .recovered()
+          .sending('attempt-2')
+          .succeeded();
+
+      expect(flagged.sawAmbiguousAttempt, isTrue);
     });
 
     test('recovery leaves every other state alone', () {
       for (final status in [
         PendingActionStatus.queued,
         PendingActionStatus.done,
-        PendingActionStatus.failed,
+        PendingActionStatus.rejected,
+        PendingActionStatus.unresolved,
       ]) {
         expect(action(status: status).recovered().status, status);
       }
@@ -84,9 +199,9 @@ void main() {
 
     test('the id never changes, so a retry cannot become a second send', () {
       var a = action();
-      a = a.sending();
-      a = a.failedAttempt();
-      a = a.sending();
+      a = a.sending('attempt-1');
+      a = a.ambiguousAttempt(now);
+      a = a.sending('attempt-2');
       a = a.succeeded();
       expect(a.id, 'a1');
       expect(a.status, PendingActionStatus.done);

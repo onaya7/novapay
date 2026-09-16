@@ -30,6 +30,7 @@ void main() {
   late NovaPayApiImpl backend;
   late _MockNetworkInfo network;
   late SyncServiceImpl sync;
+  late TestClock clock;
   late TransferRepositoryImpl repository;
 
   void online({required bool connected}) {
@@ -49,9 +50,10 @@ void main() {
     Hive.init(tempDir.path);
     box = await Hive.openBox<dynamic>('transfer_test');
     db = LocalDataStorageImpl(box);
-    backend = buildApi(db);
+    clock = TestClock();
+    backend = buildApi(db, clock: clock);
     network = _MockNetworkInfo();
-    sync = SyncServiceImpl(db, backend, network);
+    sync = SyncServiceImpl(db, backend, network, clock);
     repository = TransferRepositoryImpl(
       backend,
       sync,

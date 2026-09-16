@@ -20,6 +20,7 @@ void main() {
   late NovaPayApiImpl backend;
   late _MockNetworkInfo network;
   late SyncServiceImpl service;
+  late TestClock clock;
 
   void online({required bool connected}) {
     when(() => network.isConnected).thenAnswer((_) async => connected);
@@ -37,9 +38,10 @@ void main() {
     Hive.init(tempDir.path);
     box = await Hive.openBox<dynamic>('sync_test');
     db = LocalDataStorageImpl(box);
-    backend = buildApi(db);
+    clock = TestClock();
+    backend = buildApi(db, clock: clock);
     network = _MockNetworkInfo();
-    service = SyncServiceImpl(db, backend, network);
+    service = SyncServiceImpl(db, backend, network, clock);
     online(connected: false);
   });
 
@@ -113,25 +115,94 @@ void main() {
       final action = service.actions().single;
       expect(action.status, PendingActionStatus.queued);
       expect(action.attemptCount, 1);
+      expect(action.sawAmbiguousAttempt, isTrue);
       expect(backend.transactions().requireData, isEmpty);
 
+      // It is behind a backoff window, so an immediate drain is a no-op.
+      await service.drain();
+      expect(service.actions().single.attemptCount, 1);
+
+      clock.advance(const Duration(minutes: 31));
       await service.drain();
       expect(service.actions().single.status, PendingActionStatus.done);
       expect(backend.transactions().requireData, hasLength(1));
     });
 
-    test('it gives up rather than retrying forever', () async {
+    test('an exhausted budget is handed over, not retried forever', () async {
       await queueTransfer();
       online(connected: true);
-      backend.failNext = kPendingActionMaxAttempts;
+      backend.failNext = kPendingActionMaxAttempts + 1;
       for (var i = 0; i < kPendingActionMaxAttempts; i++) {
+        clock.advance(const Duration(minutes: 31));
         await service.drain();
       }
 
       final action = service.actions().single;
-      expect(action.status, PendingActionStatus.failed);
+      expect(action.status, PendingActionStatus.unresolved);
       expect(action.attemptCount, kPendingActionMaxAttempts);
       expect(service.pending(), isEmpty);
+      expect(service.unresolved(), hasLength(1));
+    });
+
+    test('an unknown outcome keeps holding the money', () async {
+      await queueTransfer();
+      online(connected: true);
+      backend.failNext = kPendingActionMaxAttempts + 1;
+      for (var i = 0; i < kPendingActionMaxAttempts; i++) {
+        clock.advance(const Duration(minutes: 31));
+        await service.drain();
+      }
+
+      // Never released: the transfer may already have moved the money.
+      expect(service.actions().single.status, PendingActionStatus.unresolved);
+      expect(service.pendingKobo(), 500000);
+    });
+
+    test('a refusal is terminal at once and releases the hold', () async {
+      online(connected: true);
+      // More than the wallet holds, so the server answers rather than throws.
+      await service.enqueue(
+        type: PendingActionType.send,
+        amountKobo: 99900000,
+        payload: const {'recipient': '0123456789'},
+      );
+
+      final action = service.actions().single;
+      expect(action.status, PendingActionStatus.rejected);
+      expect(action.attemptCount, 1);
+      expect(action.failureMessage, contains('Not enough'));
+      expect(action.sawAmbiguousAttempt, isFalse);
+      // Provably not processed, so the money is spendable again.
+      expect(service.pendingKobo(), 0);
+    });
+
+    test('a refusal is never retried, however many drains happen', () async {
+      online(connected: true);
+      await service.enqueue(
+        type: PendingActionType.send,
+        amountKobo: 99900000,
+        payload: const {'recipient': '0123456789'},
+      );
+
+      for (var i = 0; i < 5; i++) {
+        clock.advance(const Duration(hours: 1));
+        await service.drain();
+      }
+
+      expect(service.actions().single.attemptCount, 1);
+    });
+
+    test('one action inside its window does not block another', () async {
+      online(connected: true);
+      backend.failNext = 1;
+      final blocked = await queueTransfer();
+      expect(service.actions().single.status, PendingActionStatus.queued);
+
+      final second = await queueTransfer(amountKobo: 100000);
+
+      final byId = {for (final a in service.actions()) a.id: a};
+      expect(byId[blocked.id]!.status, PendingActionStatus.queued);
+      expect(byId[second.id]!.status, PendingActionStatus.done);
     });
   });
 
@@ -190,7 +261,12 @@ void main() {
       final backendAfter = buildApi(db);
       final networkAfter = _MockNetworkInfo();
       when(() => networkAfter.isConnected).thenAnswer((_) async => true);
-      final serviceAfter = SyncServiceImpl(db, backendAfter, networkAfter);
+      final serviceAfter = SyncServiceImpl(
+        db,
+        backendAfter,
+        networkAfter,
+        TestClock(),
+      );
       addTearDown(serviceAfter.dispose);
 
       expect(serviceAfter.pending().single.id, action.id);
@@ -209,20 +285,22 @@ void main() {
       online(connected: true);
       backend.failNext = 1;
       await queueTransfer();
-      await service.drain();
+      clock.advance(const Duration(minutes: 31));
       await service.drain();
       expect(service.actions().single.status, PendingActionStatus.done);
     });
 
     test('recoverInterrupted requeues a stranded send', () async {
       await queueTransfer();
-      final stranded = service.actions().single.sending();
+      final stranded = service.actions().single.sending('attempt-1');
       await db.write<String>('pending_actions', '[${_json(stranded)}]');
       expect(service.actions().single.status, PendingActionStatus.sending);
 
       await service.recoverInterrupted();
-      expect(service.actions().single.status, PendingActionStatus.queued);
-      expect(service.actions().single.attemptCount, 0);
+      final recovered = service.actions().single;
+      expect(recovered.status, PendingActionStatus.queued);
+      // It reached the server once, so the outcome is unknown from here on.
+      expect(recovered.sawAmbiguousAttempt, isTrue);
     });
   });
 

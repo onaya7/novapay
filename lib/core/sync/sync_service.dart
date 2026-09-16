@@ -6,6 +6,8 @@ import 'package:novapay/core/constants/storage_keys.dart';
 import 'package:novapay/core/local_data/local_data_storage.dart';
 import 'package:novapay/core/network_info/network_info.dart';
 import 'package:novapay/core/sync/pending_action.dart';
+import 'package:novapay/core/time/clock.dart';
+import 'package:novapay/server/models/api_response.dart';
 import 'package:novapay/server/novapay_api.dart';
 import 'package:uuid/uuid.dart';
 
@@ -24,6 +26,9 @@ abstract class SyncService {
   /// Just what still owes an outcome, oldest first.
   List<PendingAction> pending();
 
+  /// Anything that ended without a readable answer and needs a decision.
+  List<PendingAction> unresolved();
+
   /// Saves the action, then tries to send it straight away.
   Future<PendingAction> enqueue({
     required PendingActionType type,
@@ -34,10 +39,10 @@ abstract class SyncService {
   /// Puts anything interrupted mid-send back in the queue. Call at startup.
   Future<void> recoverInterrupted();
 
-  /// Sends everything queued. Does nothing without a network.
+  /// Sends everything runnable. Does nothing without a network.
   Future<void> drain();
 
-  /// Total still owed, so the wallet can show committed but unsettled money.
+  /// Money the customer cannot spend: still owed, or possibly already gone.
   int pendingKobo();
 
   Future<void> clearFinished();
@@ -47,17 +52,23 @@ abstract class SyncService {
 
 @LazySingleton(as: SyncService)
 class SyncServiceImpl implements SyncService {
-  SyncServiceImpl(this._db, this._api, this._networkInfo, {Uuid? uuid})
-    : _uuid = uuid ?? const Uuid();
+  SyncServiceImpl(
+    this._db,
+    this._api,
+    this._networkInfo,
+    this._clock, {
+    Uuid? uuid,
+  }) : _uuid = uuid ?? const Uuid();
 
   final LocalDataStorage _db;
   final NovaPayApi _api;
   final NetworkInfo _networkInfo;
+  final Clock _clock;
   final Uuid _uuid;
 
   final _changes = StreamController<List<PendingAction>>.broadcast();
 
-  /// Serializes drains. A bool guard would make a drain requested mid-drain a
+  /// Serialises drains. A bool guard would make a drain requested mid-drain a
   /// silent no-op, which loses the wake-up when connectivity returns.
   Future<void> _lock = Future<void>.value();
 
@@ -86,6 +97,11 @@ class SyncServiceImpl implements SyncService {
   List<PendingAction> pending() =>
       actions().where((action) => action.status.isPending).toList()
         ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+
+  @override
+  List<PendingAction> unresolved() => actions()
+      .where((action) => action.status == PendingActionStatus.unresolved)
+      .toList();
 
   Future<void> _save(List<PendingAction> actions) async {
     await _db.write<String>(
@@ -116,11 +132,11 @@ class SyncServiceImpl implements SyncService {
       type: type,
       amountKobo: amountKobo,
       payload: payload,
-      createdAt: DateTime.now(),
+      createdAt: _clock.now(),
     );
     await _save([...actions(), action]);
     // Awaited, not fire-and-forget: a caller that also drained would otherwise
-    // spend two of the five attempts on one action.
+    // spend two of the attempts on one action.
     await drain();
     return action;
   }
@@ -133,7 +149,7 @@ class SyncServiceImpl implements SyncService {
     var changed = false;
     for (var i = 0; i < all.length; i++) {
       final recovered = all[i].recovered();
-      if (recovered.status != all[i].status) {
+      if (recovered != all[i]) {
         all[i] = recovered;
         changed = true;
       }
@@ -148,45 +164,56 @@ class SyncServiceImpl implements SyncService {
     return next;
   }
 
+  /// Drains the oldest *runnable* action, not simply the oldest: one sitting
+  /// inside its backoff window must not block the rest of the queue.
   Future<void> _drainOnce() async {
     if (!await _networkInfo.isConnected) return;
+    final now = _clock.now();
     for (final action in pending()) {
+      if (!action.isRunnableAt(now)) continue;
       await _send(action);
     }
   }
 
   Future<void> _send(PendingAction action) async {
-    await _replace(action.sending());
+    final attempt = action.sending(_uuid.v4());
+    await _replace(attempt);
     try {
-      final response = switch (action.type) {
+      final response = switch (attempt.type) {
         PendingActionType.send => await _api.transfer(
-          idempotencyKey: action.id,
-          recipient: action.payload['recipient'] as String,
-          amountKobo: action.amountKobo,
+          idempotencyKey: attempt.id,
+          recipient: attempt.payload['recipient'] as String,
+          amountKobo: attempt.amountKobo,
         ),
         PendingActionType.contribute => await _api.contribute(
-          idempotencyKey: action.id,
-          goalId: action.payload['goalId'] as String,
-          amountKobo: action.amountKobo,
+          idempotencyKey: attempt.id,
+          goalId: attempt.payload['goalId'] as String,
+          amountKobo: attempt.amountKobo,
         ),
       };
-      await _replace(
-        response.isSuccess ? action.succeeded() : action.failedAttempt(),
-      );
+      await _replace(_settle(attempt, response));
     } on Object {
-      // Only a transport failure reaches here; a refusal came back as a
-      // response above.
-      await _replace(action.failedAttempt());
+      // Only a transport failure reaches here. It was transmitted, so it may
+      // have been processed; that is not the same as knowing it was not.
+      await _replace(attempt.ambiguousAttempt(_clock.now()));
     }
   }
 
+  /// An answer is knowledge either way: a refusal is provably not processed,
+  /// so it is terminal rather than retried.
+  PendingAction _settle(PendingAction attempt, ApiResponse<Object?> response) =>
+      response.isSuccess
+      ? attempt.succeeded()
+      : attempt.refused(response.message);
+
   @override
-  int pendingKobo() =>
-      pending().fold(0, (sum, action) => sum + action.amountKobo);
+  int pendingKobo() => actions()
+      .where((action) => action.status.holdsFunds)
+      .fold(0, (sum, action) => sum + action.amountKobo);
 
   @override
   Future<void> clearFinished() async {
-    await _save(actions().where((a) => a.status.isPending).toList());
+    await _save(actions().where((a) => !a.status.isTerminal).toList());
   }
 
   @override

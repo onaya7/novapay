@@ -38,10 +38,9 @@ class WalletRepositoryImpl implements WalletRepository {
   List<ActivityItem> _activity() {
     final settled = _unwrap(_api.transactions());
     return <ActivityItem>[
-      // A settled action is already in the ledger, so including it here too
-      // would show the same transfer twice.
       for (final action in _sync.actions())
-        if (action.status != PendingActionStatus.done) _fromAction(action),
+        if (_queuedStatus(action.status) case final status?)
+          _fromAction(action, status),
       for (final transaction in settled) _fromTransaction(transaction),
     ]..sort((a, b) => b.occurredAt.compareTo(a.occurredAt));
   }
@@ -53,15 +52,25 @@ class WalletRepositoryImpl implements WalletRepository {
     return response.requireData;
   }
 
-  ActivityItem _fromAction(PendingAction action) => ActivityItem(
-    id: action.id,
-    title: _titleFor(action),
-    amountKobo: -action.amountKobo,
-    occurredAt: action.createdAt,
-    status: action.status == PendingActionStatus.failed
-        ? ActivityStatus.failed
-        : ActivityStatus.pending,
-  );
+  ActivityItem _fromAction(PendingAction action, ActivityStatus status) =>
+      ActivityItem(
+        id: action.id,
+        title: _titleFor(action),
+        amountKobo: -action.amountKobo,
+        occurredAt: action.createdAt,
+        status: status,
+        failureMessage: action.failureMessage,
+      );
+
+  /// Null once it has settled: the server owns it from then on, so it is
+  /// listed from the ledger and dropping it here is what stops a double entry.
+  ActivityStatus? _queuedStatus(PendingActionStatus status) => switch (status) {
+    PendingActionStatus.queued ||
+    PendingActionStatus.sending => ActivityStatus.pending,
+    PendingActionStatus.rejected => ActivityStatus.rejected,
+    PendingActionStatus.unresolved => ActivityStatus.unresolved,
+    PendingActionStatus.done => null,
+  };
 
   String _titleFor(PendingAction action) => switch (action.type) {
     PendingActionType.send =>

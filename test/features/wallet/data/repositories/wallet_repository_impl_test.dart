@@ -29,6 +29,7 @@ void main() {
   late NovaPayApiImpl backend;
   late _MockNetworkInfo network;
   late SyncServiceImpl sync;
+  late TestClock clock;
   late WalletRepositoryImpl repository;
 
   void online({required bool connected}) {
@@ -45,9 +46,10 @@ void main() {
     Hive.init(tempDir.path);
     box = await Hive.openBox<dynamic>('wallet_repo_test');
     db = LocalDataStorageImpl(box);
-    backend = buildApi(db);
+    clock = TestClock();
+    backend = buildApi(db, clock: clock);
     network = _MockNetworkInfo();
-    sync = SyncServiceImpl(db, backend, network);
+    sync = SyncServiceImpl(db, backend, network, clock);
     repository = WalletRepositoryImpl(backend, sync, const EitherSafeRunner());
     online(connected: false);
   });
@@ -145,7 +147,7 @@ void main() {
       expect(snapshot.pendingKobo, 0);
     });
 
-    test('an exhausted action is shown as failed, not hidden', () async {
+    test('an unknown outcome is surfaced, not hidden', () async {
       online(connected: true);
       backend.failNext = 10;
       await sync.enqueue(
@@ -154,12 +156,30 @@ void main() {
         payload: const {'recipient': '0123456789'},
       );
       for (var i = 0; i < 5; i++) {
+        clock.advance(const Duration(minutes: 31));
         await sync.drain();
       }
 
       final snapshot = await loaded();
 
-      expect(snapshot.activity.single.status, ActivityStatus.failed);
+      expect(snapshot.activity.single.status, ActivityStatus.unresolved);
+      // Still held: it may already have moved the money.
+      expect(snapshot.pendingKobo, 500000);
+    });
+
+    test('a refusal is shown with its reason and releases the hold', () async {
+      online(connected: true);
+      await sync.enqueue(
+        type: PendingActionType.send,
+        amountKobo: 99900000,
+        payload: const {'recipient': '0123456789'},
+      );
+
+      final snapshot = await loaded();
+
+      expect(snapshot.activity.single.status, ActivityStatus.rejected);
+      expect(snapshot.activity.single.failureMessage, contains('Not enough'));
+      expect(snapshot.pendingKobo, 0);
     });
 
     test('newest first, whichever side of the queue it came from', () async {
@@ -170,6 +190,7 @@ void main() {
         payload: const {'recipient': '0000000001'},
       );
       await sync.drain();
+      clock.advance(const Duration(minutes: 1));
       online(connected: false);
       await sync.enqueue(
         type: PendingActionType.send,

@@ -6,25 +6,49 @@ part 'pending_action.g.dart';
 
 enum PendingActionType { send, contribute }
 
+/// The terminal states are split by what is **known**, not by how many
+/// attempts were spent. A transport failure is not evidence the server did
+/// nothing, so it can never produce a state the app will retry on its own.
 enum PendingActionStatus {
   queued,
   sending,
-  done,
-  failed;
 
-  /// Still owes the user an outcome, so the UI shows it as Pending.
+  /// The server acknowledged it.
+  done,
+
+  /// The server refused it definitively. Provably not processed, so the hold
+  /// is released and the customer may try again with a fresh key.
+  rejected,
+
+  /// At least one attempt was transmitted without a readable answer. It may
+  /// have moved money. Held, and never auto-resent.
+  unresolved;
+
+  /// Still owes the customer an outcome, so the UI shows it as Pending.
   bool get isPending => this == queued || this == sending;
+
+  /// Nothing more will happen without a decision.
+  bool get isTerminal => this == done || this == rejected || this == unresolved;
+
+  /// Money the customer cannot spend: still owed, or possibly already gone.
+  bool get holdsFunds => isPending || this == unresolved;
 }
 
 /// Bumped when the stored shape changes, so an older build refuses a row it
 /// cannot read instead of misreading it.
-const int kPendingActionSchemaVersion = 1;
+const int kPendingActionSchemaVersion = 2;
 
-/// How many times a single action is attempted before the queue gives up.
+/// How many ambiguous attempts are made before the customer has to decide.
 const int kPendingActionMaxAttempts = 5;
 
-/// One row in the local queue: a money action the user asked for, saved to the
-/// database before any network call so it survives being offline or killed.
+/// First backoff step; each further attempt doubles it.
+const Duration kPendingActionBaseBackoff = Duration(seconds: 2);
+
+/// Ceiling, so a long outage does not push the next try days out.
+const Duration kPendingActionMaxBackoff = Duration(minutes: 30);
+
+/// One row in the local queue: a money action the customer asked for, saved to
+/// the database before any network call so it survives being offline or killed.
 @freezed
 abstract class PendingAction with _$PendingAction {
   const factory PendingAction({
@@ -38,6 +62,20 @@ abstract class PendingAction with _$PendingAction {
     required DateTime createdAt,
     @Default(PendingActionStatus.queued) PendingActionStatus status,
     @Default(0) int attemptCount,
+
+    /// Fresh per attempt, for tracing. Never used for deduplication.
+    String? attemptId,
+
+    /// One-way: set by any attempt that was transmitted without a readable
+    /// answer, and never cleared.
+    @Default(false) bool sawAmbiguousAttempt,
+
+    /// Persisted, because an in-memory backoff resets on restart and produces
+    /// a thundering herd on the first cold start after a crash loop.
+    DateTime? nextAttemptAt,
+
+    /// Why it was refused, in words the customer can act on.
+    String? failureMessage,
     @Default(kPendingActionSchemaVersion) int schemaVersion,
   }) = _PendingAction;
 
@@ -69,27 +107,57 @@ abstract class PendingAction with _$PendingAction {
 
   Money get amount => Money.fromKobo(amountKobo);
 
-  /// A send interrupted by a crash is safe to resend, because the id is the
-  /// idempotency key.
+  /// Ready to try now: pending, and past any backoff window.
+  bool isRunnableAt(DateTime now) {
+    if (!status.isPending) return false;
+    final due = nextAttemptAt;
+    return due == null || !now.isBefore(due);
+  }
+
+  /// A send interrupted by a crash was transmitted, so it may have been
+  /// processed. Safe to resend only because the id is the idempotency key.
   PendingAction recovered() => status == PendingActionStatus.sending
-      ? copyWith(status: PendingActionStatus.queued)
+      ? copyWith(status: PendingActionStatus.queued, sawAmbiguousAttempt: true)
       : this;
 
-  PendingAction sending() => copyWith(status: PendingActionStatus.sending);
-
-  PendingAction succeeded() => copyWith(
-    status: PendingActionStatus.done,
+  PendingAction sending(String attemptId) => copyWith(
+    status: PendingActionStatus.sending,
+    attemptId: attemptId,
     attemptCount: attemptCount + 1,
   );
 
-  /// Requeues until the budget runs out, then stops so it cannot spin.
-  PendingAction failedAttempt() {
-    final attempts = attemptCount + 1;
+  PendingAction succeeded() =>
+      copyWith(status: PendingActionStatus.done, nextAttemptAt: null);
+
+  /// The server answered and said no. Nothing moved, so the hold is released.
+  PendingAction refused(String message) => copyWith(
+    status: PendingActionStatus.rejected,
+    failureMessage: message,
+    nextAttemptAt: null,
+  );
+
+  /// The request was transmitted but no answer came back. Retried with the
+  /// same key until the budget runs out, then handed to the customer.
+  PendingAction ambiguousAttempt(DateTime now) {
+    final exhausted = attemptCount >= kPendingActionMaxAttempts;
     return copyWith(
-      status: attempts >= kPendingActionMaxAttempts
-          ? PendingActionStatus.failed
+      status: exhausted
+          ? PendingActionStatus.unresolved
           : PendingActionStatus.queued,
-      attemptCount: attempts,
+      sawAmbiguousAttempt: true,
+      nextAttemptAt: exhausted ? null : now.add(_backoff),
     );
+  }
+
+  /// Exponential, and jittered off the id so a whole cell tower reconnecting
+  /// at once does not retry in lockstep.
+  Duration get _backoff {
+    final step =
+        kPendingActionBaseBackoff * (1 << (attemptCount - 1).clamp(0, 16));
+    final capped = step > kPendingActionMaxBackoff
+        ? kPendingActionMaxBackoff
+        : step;
+    final jitter = capped.inMilliseconds ~/ 4;
+    return capped + Duration(milliseconds: id.hashCode.abs() % (jitter + 1));
   }
 }
