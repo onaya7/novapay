@@ -33,6 +33,12 @@ void main() {
     });
   });
 
+  test('the converter can be built at runtime, not only as a const', () {
+    // Deliberately non-const: a const call is folded and never runs.
+    // ignore: prefer_const_constructors
+    expect(ConvertFailureToString()(const Failure.unknown()), isNotEmpty);
+  });
+
   test('failures compare by value', () {
     expect(const Failure.serverError('x'), const Failure.serverError('x'));
     expect(const Failure.noInternet(), const Failure.noInternet());
