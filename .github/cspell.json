@@ -1,7 +1,10 @@
 {
   "version": "0.2",
   "$schema": "https://raw.githubusercontent.com/streetsidesoftware/cspell/main/cspell.schema.json",
-  "dictionaries": ["vgv_allowed", "vgv_forbidden"],
+  "dictionaries": [
+    "vgv_allowed",
+    "vgv_forbidden"
+  ],
   "dictionaryDefinitions": [
     {
       "name": "vgv_allowed",
@@ -16,23 +19,24 @@
   ],
   "useGitignore": true,
   "words": [
-    "Contador",
-    "localizable",
-    "mostrado",
-    "página",
-    "Texto",
-    "Hola",
-    "Mundo",
-    "Saludo",
     "chargeback",
+    "Contador",
     "dedup",
     "entrancy",
     "fintech",
+    "Hola",
+    "interleavings",
+    "localizable",
     "microtask",
+    "mostrado",
+    "Mundo",
     "NDPA",
+    "página",
     "Riverpod",
+    "Saludo",
     "Satoshi",
     "tappable",
+    "Texto",
     "touchpoints",
     "usecase"
   ]
