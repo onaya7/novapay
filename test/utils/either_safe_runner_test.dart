@@ -8,6 +8,13 @@ import 'package:novapay/utils/either_safe_runner.dart';
 void main() {
   const runner = EitherSafeRunner();
 
+  test('the constructor runs, not just its canonicalized const form', () {
+    // Every call site elsewhere is const, so the constructor is otherwise
+    // canonicalized away and never actually executes.
+    // ignore: prefer_const_constructors
+    expect(EitherSafeRunner(), isA<EitherSafeRunner>());
+  });
+
   Future<Failure> failureFrom(Future<int> Function() callback) async {
     final result = await runner<int>(safeCallback: callback);
     return result.fold<Failure>(

@@ -11,6 +11,8 @@ import 'package:novapay/server/repositories/savings_goal_repository.dart';
 import 'package:novapay/server/repositories/transaction_repository.dart';
 import 'package:novapay/server/services/savings_service.dart';
 
+import '../../helpers/server_harness.dart';
+
 void main() {
   late Directory tempDir;
   late Box<dynamic> box;
@@ -29,7 +31,13 @@ void main() {
     transactions = TransactionRepositoryImpl(db);
     goals = SavingsGoalRepositoryImpl(db);
     idempotency = IdempotencyRepositoryImpl(db);
-    service = SavingsServiceImpl(goals, accounts, transactions, idempotency);
+    service = SavingsServiceImpl(
+      goals,
+      accounts,
+      transactions,
+      idempotency,
+      TestClock(),
+    );
   });
 
   tearDown(() async {

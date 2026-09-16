@@ -5,8 +5,9 @@ Money set aside for something specific. A goal has a name, a target and a date; 
 money out of the wallet and into it, and the bar shows how far along it is.
 
 ## Entry screens
-- `SavingsPage` (`presentation/view/savings_page.dart`) — the list, pushed from the wallet's `Save`
-  action.
+- `SavingsPage` (`presentation/view/savings_page.dart`) — the list, one of the four tabs behind
+  `AppShell`'s bottom nav. The wallet's `Save` quick action switches to this tab via `NavCubit`
+  rather than pushing a second copy.
 - `CreateGoalPage` — name, target, date.
 - `ContributePage` — the amount, pushed from a goal card.
 

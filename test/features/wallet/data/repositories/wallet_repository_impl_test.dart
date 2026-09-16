@@ -118,6 +118,20 @@ void main() {
       expect(snapshot.activity.single.title, 'Savings contribution');
     });
 
+    test('a queued top-up is money arriving, so it renders positive', () async {
+      await sync.enqueue(
+        type: PendingActionType.fund,
+        amountKobo: 500000,
+        payload: const {},
+      );
+
+      final snapshot = await loaded();
+
+      expect(snapshot.activity.single.title, 'Adding to wallet');
+      expect(snapshot.activity.single.amountKobo, 500000);
+      expect(snapshot.activity.single.isDebit, isFalse);
+    });
+
     test('a send with no recipient in the payload still reads', () async {
       await sync.enqueue(
         type: PendingActionType.send,

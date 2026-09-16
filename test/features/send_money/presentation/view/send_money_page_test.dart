@@ -6,6 +6,9 @@ import 'package:mocktail/mocktail.dart';
 import 'package:novapay/core/components/custom_button.dart';
 import 'package:novapay/core/injections/injection.dart';
 import 'package:novapay/core/money/money.dart';
+import 'package:novapay/features/funding/domain/entities/funding_draft.dart';
+import 'package:novapay/features/funding/presentation/cubit/add_money_cubit.dart';
+import 'package:novapay/features/funding/presentation/view/add_money_page.dart';
 import 'package:novapay/features/send_money/domain/entities/transfer_draft.dart';
 import 'package:novapay/features/send_money/domain/entities/transfer_receipt.dart';
 import 'package:novapay/features/send_money/presentation/cubit/send_money_cubit.dart';
@@ -16,6 +19,9 @@ import '../../../../helpers/helpers.dart';
 
 class _MockSendMoneyCubit extends MockCubit<SendMoneyState>
     implements SendMoneyCubit;
+
+class _MockAddMoneyCubit extends MockCubit<AddMoneyState>
+    implements AddMoneyCubit;
 
 const _available = Money.fromKobo(2000000);
 
@@ -140,6 +146,16 @@ void main() {
     });
 
     testWidgets('the blocked CTA is live, not disabled', (tester) async {
+      final addMoney = _MockAddMoneyCubit();
+      when(addMoney.start).thenAnswer((_) async {});
+      whenListen(
+        addMoney,
+        const Stream<AddMoneyState>.empty(),
+        initialState: const AddMoneyState.editing(FundingDraft()),
+      );
+      sl.registerFactory<AddMoneyCubit>(() => addMoney);
+      addTearDown(sl.reset);
+
       await pumpView(
         tester,
         SendMoneyState.editing(
@@ -152,8 +168,8 @@ void main() {
         isNotNull,
       );
       await tester.tap(find.byType(CustomButton));
-      await tester.pump();
-      expect(find.byType(SnackBar), findsOneWidget);
+      await tester.pumpAndSettle();
+      expect(find.byType(AddMoneyView), findsOneWidget);
     });
 
     testWidgets('a preset fills the amount without typing', (tester) async {

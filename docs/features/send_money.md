@@ -37,8 +37,9 @@ carries the form and every rule that gates it, so no rule lives in a widget.
   after the drain; anything else is shown as `Queued`, which covers offline and a timeout alike.
 - **`SendMoneyCubit` is a factory, not a singleton.** A second transfer must start from an empty
   draft, so it must not survive the screen.
-- The `Fund Wallet` CTA is a live control that currently explains it is out of scope. A disabled
-  button there would be a dead end rather than a state.
+- **`Fund Wallet` navigates to the real funding flow (`AddMoneyPage`)**, not a stub. A blocked
+  screen keeps a live CTA that fixes the problem; a disabled button there would be a dead end rather
+  than a state.
 - **The amount step still has a real `TextField`.** The large figure is a display; the field beneath
   it is what owns the keyboard, `AmountInputFormatter` and the `Money.tryParse` path. Do not replace
   it with a custom keypad without moving that parsing with it.

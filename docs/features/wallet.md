@@ -5,9 +5,11 @@ The home screen. Shows what the customer can actually spend, what is still in fl
 activity list that merges settled transactions with money still sitting in the local queue.
 
 ## Entry screens
-`WalletPage` (`lib/features/wallet/presentation/view/wallet_page.dart`) is the app's `home`. It
-resolves `WalletCubit` from the container and starts it; `WalletView` renders. There is no router
-yet, so nothing navigates away from it.
+`WalletPage` (`lib/features/wallet/presentation/view/wallet_page.dart`) is the first of the four tabs
+behind `AppShell`'s bottom nav (Wallet · Savings · Activity · Profile). It resolves `WalletCubit`
+from the container and starts it; `WalletView` renders. Its quick actions push `SendMoneyPage` and
+`AddMoneyPage`, and switch tab (via `NavCubit`) for Save and History rather than pushing a second
+copy of a screen that already exists as a tab.
 
 ## Endpoints
 Through `NovaPayApi`, never a repository call from the UI:
@@ -29,7 +31,10 @@ send appears without a reload. `refresh()` backs pull-to-refresh and the error r
 2. `data/repositories/wallet_repository_impl.dart` — the merge, and the envelope-to-`Failure` bridge.
 3. `presentation/cubit/wallet_cubit.dart` — load-once-then-follow.
 4. `presentation/view/wallet_page.dart` — the three states.
-5. `presentation/widgets/wallet_widgets.dart` — header, balance card, actions, activity row,
+5. `presentation/view/activity_page.dart` — the full history, reading the same `WalletCubit`
+   snapshot as the wallet's recent list. It lives here rather than as its own feature because a
+   separate feature would mean importing this one's internals from another.
+6. `presentation/widgets/wallet_widgets.dart` — header, balance card, actions, activity row,
    skeleton.
 
 ## Gotchas
@@ -45,9 +50,15 @@ send appears without a reload. `refresh()` backs pull-to-refresh and the error r
   would escape the runner deliberately.
 - **`WalletRepositoryImpl` depends on `SyncService`, not the other way round.** The queue knows
   nothing about the wallet screen.
-- **The header names the surface, not a person.** There is no auth and no profile, so there is no
-  name to greet. The greeting itself is real — derived from the clock by `DateTimeX.greeting`.
+- **The header greets a name when one exists, and the surface when it doesn't.** There is still no
+  auth, so the name is `ProfileCubit`'s locally-stored `displayName`, read via
+  `UserProfile.greetingName`; with nothing saved it falls back to `Wallet` rather than fabricating a
+  name. The greeting word itself is real — derived from the clock by `DateTimeX.greeting`.
+- **`WalletPage` reads the app-wide `ProfileCubit` and `NavCubit` rather than creating either.** Both
+  are provided above the shell by `App`/`AppShell`; a screen resolving its own copy would drift out of
+  step with the tab the rest of the shell is showing.
 - **Hiding the balance is local widget state and is not persisted.** It protects against someone
   reading over a shoulder, which is a per-glance concern, not a stored preference.
-- **Two of the four quick actions are deliberately dead.** `Add money` and `More` have no feature
-  behind them; they stay visible and disabled so the row does not change shape later.
+- **All four quick actions are live.** `More` is gone; `Add money` opens the real funding flow.
+  `Save` and `History` switch tab instead of pushing, because both destinations already exist as
+  tabs and a push would leave a second copy on the stack.

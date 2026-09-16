@@ -11,13 +11,19 @@ import 'package:novapay/core/extensions/date_time_extension.dart';
 import 'package:novapay/features/wallet/domain/entities/activity_item.dart';
 import 'package:novapay/features/wallet/domain/entities/wallet_snapshot.dart';
 
-/// The greeting strip above the balance card. There is no signed-in profile,
-/// so it names the surface rather than inventing a person.
+/// The greeting strip above the balance card. `title` falls back to naming
+/// the surface when there is no local display name to greet.
 class WalletHeader extends StatelessWidget {
-  const new({required this.title, required this.greeting, super.key});
+  const new({
+    required this.title,
+    required this.greeting,
+    this.avatar,
+    super.key,
+  });
 
   final String title;
   final String greeting;
+  final ImageProvider? avatar;
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +31,7 @@ class WalletHeader extends StatelessWidget {
     final texts = Theme.of(context).textTheme;
     return Row(
       children: [
-        const AppAvatar(icon: Icons.account_balance_wallet_outlined),
+        AppAvatar(icon: Icons.account_balance_wallet_outlined, image: avatar),
         AppSize.w(AppSize.smd),
         Expanded(
           child: Column(
@@ -207,29 +213,36 @@ class _PendingPill extends StatelessWidget {
   }
 }
 
-/// The wallet's actions. Unavailable ones stay visible and disabled, so the
-/// row does not change shape as features arrive.
+/// The wallet's four jobs. Every one of them does something.
 class WalletActions extends StatelessWidget {
-  const new({required this.onSend, this.onSave, super.key});
+  const new({
+    required this.onSend,
+    required this.onAddMoney,
+    required this.onSave,
+    required this.onHistory,
+    super.key,
+  });
 
   final VoidCallback onSend;
-  final VoidCallback? onSave;
+  final VoidCallback onAddMoney;
+  final VoidCallback onSave;
+  final VoidCallback onHistory;
 
   @override
   Widget build(BuildContext context) {
     return QuickActionRow(
       tiles: [
         QuickActionTile(icon: Icons.arrow_upward, label: 'Send', onTap: onSend),
+        QuickActionTile(icon: Icons.add, label: 'Add money', onTap: onAddMoney),
         QuickActionTile(
           icon: Icons.savings_outlined,
           label: 'Save',
           onTap: onSave,
         ),
-        const QuickActionTile(icon: Icons.add, label: 'Add money', onTap: null),
-        const QuickActionTile(
-          icon: Icons.more_horiz,
-          label: 'More',
-          onTap: null,
+        QuickActionTile(
+          icon: Icons.receipt_long_outlined,
+          label: 'History',
+          onTap: onHistory,
         ),
       ],
     );
@@ -329,6 +342,29 @@ class _Avatar extends StatelessWidget {
         size: AppSize.iconMd,
         color: item.isDebit ? colors.textSubheading : AppColor.success,
       ),
+    );
+  }
+}
+
+/// Stands in for a list of rows while the first load runs.
+class ActivitySkeleton extends StatelessWidget {
+  const new({this.rows = 6, super.key});
+
+  final int rows;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (var i = 0; i < rows; i++) ...[
+          const SkeletonBox(
+            height: AppSize.rowMinHeight,
+            radius: AppSize.radiusLg,
+          ),
+          AppSize.h(AppSize.smd),
+        ],
+      ],
     );
   }
 }

@@ -2,7 +2,7 @@
 
 **Scenario:** FirstBank NovaPay → NovaWallet. Two journeys, sending money and contributing to a NovaSave goal, built for a market where a large share of users are on low-end Android with patchy connectivity.
 
-> **Status: the brief's scope is built.** The money layer, the offline queue, the stand-in backend, the design system and all three screens are implemented and under test. Everything the design specifies *beyond* the brief is marked **`[DESIGN — not built]`** where it appears, because a document that quietly describes code that does not exist is worth less than no document.
+> **Status: the brief's scope is built, plus a bottom nav, a local profile and a real funding flow beyond it.** The money layer, the offline queue, the stand-in backend, the design system and every screen are implemented and under test. Everything the design specifies *beyond* the brief is marked **`[DESIGN — not built]`** where it appears, because a document that quietly describes code that does not exist is worth less than no document.
 
 > ## The design in one paragraph
 > Every money-moving action is **written to a local queue before any network call**, so the online and offline paths are the same code and "offline" is not a branch. Each action carries a **client-generated idempotency key that is stable across retries**, and the backend keeps a **persisted** ledger keyed on it. That combination is what makes replay safe: the queue may send a duplicate, and the server collapses it. The honest claim is at-least-once delivery plus server-side deduplication, which is what "exactly once" means in practice.
@@ -11,7 +11,7 @@
 
 ## Implementation status
 
-`492 tests, 100% line coverage` `[VERIFIED: fvm flutter test --coverage]`
+`589 tests, 100% line coverage` `[VERIFIED: fvm flutter test --coverage]`
 
 | Area | Status | Where |
 |---|---|---|
@@ -24,7 +24,10 @@
 | Wallet home — balance, available vs pending, merged activity, pull-to-refresh | **Built** | [`lib/features/wallet/`](lib/features/wallet/) |
 | Send Money — recipient → amount → confirm, offline queueing, enqueue funds guard | **Built** | [`lib/features/send_money/`](lib/features/send_money/) |
 | NovaSave goal — create, contribute, integer-basis-point progress | **Built** | [`lib/features/savings/`](lib/features/savings/) |
-| Leases, persisted backoff with jitter, `unresolved` state, per-attempt trace id | **`[DESIGN — not built]`** | Argued below; deliberately not built yet |
+| Add money — real funding flow, offline queueing, wallet quick action and Send Money's `Fund Wallet` both route to it | **Built** | [`lib/features/funding/`](lib/features/funding/) |
+| Local profile — device-only display name and avatar photo, both read by the wallet greeting | **Built** | [`lib/features/profile/`](lib/features/profile/) |
+| Four-tab bottom nav, light/dark/system theme | **Built** | [`lib/app/`](lib/app/), [`lib/core/components/custom_navigation_bar.dart`](lib/core/components/custom_navigation_bar.dart) |
+| Leases (durable single-flight), status-code-based retry classification | **`[DESIGN — not built]`** | Argued below; deliberately not built yet |
 
 The last row is the honest one. Those are the right answers for a production wallet and the reasoning for each is kept below, because the reasoning is the deliverable. They are not in the code, and this table is the only place that needs checking to know that.
 
@@ -83,7 +86,7 @@ fvm flutter run --flavor production --target lib/main_production.dart
 ```
 
 ```sh
-fvm flutter test --coverage        # 492 tests, 100% line coverage
+fvm flutter test --coverage        # 589 tests, 100% line coverage
 fvm flutter analyze lib test       # exits non-zero on info, so treat any issue as a failure
 fvm dart format lib test
 fvm dart run bloc_tools:bloc lint . # the bloc rules live under a key `flutter analyze` ignores
@@ -101,12 +104,17 @@ Two conventions that will trip a reader who skims:
 
 ## Screens and scope
 
-In scope, and nothing else:
+Four tabs behind the bottom nav — **Wallet · Savings · Activity · Profile** — plus the tasks that push
+over them:
 
 | Screen | Contents |
 |---|---|
-| **Wallet home** | Balance card, available vs pending, recent transactions, pull-to-refresh |
-| **Send Money** | Recipient → amount → confirm, as three steps |
+| **Wallet home** (tab) | Balance card, available vs pending, recent activity, pull-to-refresh, quick actions |
+| **Savings** (tab) | The NovaSave goal list |
+| **Activity** (tab) | The full merged history — the same snapshot the wallet's recent list reads |
+| **Profile** (tab) | Avatar, device-only display name, Settings (theme, About) |
+| **Send Money** | Recipient → amount → confirm, as three steps, pushed from the wallet |
+| **Add money** | A real funding flow — amount, quick presets, balance-after preview — pushed from the wallet's quick action and from Send Money's `Fund Wallet` CTA when a transfer is blocked |
 | **NovaSave goal** | Create (name, target, date), contribute, progress bar with printed percentage |
 
 **Explicitly deferred to post-launch**, so nobody half-starts them: localization beyond the English scaffold, biometric confirmation above a threshold, local notification on successful sync, and golden tests. Each is a stretch goal in the brief `[SOURCE: brief §2.4]` and each is a genuine enhancement, but none of them is the thing being graded.
@@ -285,15 +293,19 @@ A `PendingAction` carries `[SOURCE: lib/core/sync/pending_action.dart]`:
 | Field | Purpose |
 |---|---|
 | `id` | Client-generated UUID, **stable for the life of the operation**. Sent as the idempotency key |
-| `type` | `send` or `contribute` |
+| `type` | `send` · `contribute` · `fund` — `fund` is money arriving, so it never reduces what may be spent while it is queued |
 | `amountKobo` | `int` |
 | `payload` | The request body |
 | `schemaVersion` | The version that wrote the row, checked before it is decoded |
-| `status` | `queued` · `sending` · `done` · `failed` |
+| `status` | `queued` · `sending` · `done` · `rejected` · `unresolved` |
 | `attemptCount` | Retry budget, capped at 5 |
+| `attemptId` | Fresh UUID per attempt, for tracing. Never used for deduplication |
+| `sawAmbiguousAttempt` | One-way flag: set the moment any attempt is transmitted without a readable answer |
+| `nextAttemptAt` | Persisted backoff, so an in-memory timer resetting on restart cannot cause a thundering herd |
+| `failureMessage` | Why a `rejected` entry was refused, in words the customer can act on |
 | `createdAt` | FIFO ordering |
 
-**`[DESIGN — not built]`** The full design adds `attemptId` (per-attempt trace id), `sawAmbiguousAttempt`, `nextAttemptAt` (persisted backoff), `leaseOwner`/`leaseExpiresAt` (durable single-flight lease) and `userId`. Each is argued below. None is in the code.
+**`[DESIGN — not built]`** Only `leaseOwner`/`leaseExpiresAt` (a durable single-flight lease, argued in [Restart is the hard case](#restart-is-the-hard-case)) and `userId` (argued in [Poison entries](#poison-entries-and-shared-devices)) remain undone. Everything else in this section describes code that runs, not a proposal.
 
 ### The idempotency key argument
 
@@ -304,94 +316,49 @@ A key that changes per attempt provides **zero** deduplication. If attempt 2 car
 The resolution is that the brief is conflating two different fields:
 
 - **`idempotencyKey`** — one per logical operation, stable across every retry. This is what makes replay safe, and it is `PendingAction.id` in the code.
-- **`attemptId`** — a fresh UUID per attempt, for tracing and for the support question "which attempt actually landed?" Never used for deduplication. **`[DESIGN — not built]`**
+- **`attemptId`** — a fresh UUID per attempt, for tracing and for the support question "which attempt actually landed?" Never used for deduplication. **Built.**
 
-Shipping both satisfies the brief's literal wording and its stated intent, and it costs one field. The stable key is built because it is load-bearing; the trace id is not, because nothing yet consumes a trace. `[JUDGMENT]`
+Shipping both satisfies the brief's literal wording and its stated intent, and it costs one field.
 
 ### The state machine as built
+
+Four states — `queued` / `sending` / `done` / a single `failed` — cannot express *"we don't know."* An earlier draft of this design shipped exactly that shape, and it is a live double-spend: attempts 1–2 fail to connect, genuinely not processed; attempt 3 reaches the server, the server debits, and the response times out on a flaky cell; attempts 4–5 fail to connect. The entry lands in `failed`, the user taps Retry, and the money moves twice. **A transport failure is not evidence the server didn't process it.** So the terminal states are split by what is *known*, not by how many attempts were spent:
 
 ```
    enqueue (always, before any network call)
             │
             ▼
-       ┌────────┐   drain, with a network   ┌─────────┐   2xx or a refusal   ┌──────┐
-       │ queued │ ─────────────────────────▶│ sending │ ───────────────────▶ │ done │
-       └────────┘                           └────┬────┘                      └──────┘
-            ▲                                    │
-            │  attemptCount < 5                  │ transport failure, or found
-            └────────────────────────────────────┤ at cold start (recoverInterrupted)
-                                                 │
-                                                 ▼  attemptCount == 5
-                                            ┌────────┐
-                                            │ failed │
-                                            └────────┘
+       ┌────────┐   drain, runnable and online    ┌─────────┐
+       │ queued │─────────────────────────────────▶ sending │
+       └───┬────┘                                 └────┬────┘
+           ▲                                            │
+           │                              ┌─────────────┼──────────────┐
+           │                          2xx │        refusal (4xx)   transport failure, or found
+           │                              ▼             ▼            `sending` at cold start
+           │                         ┌──────┐     ┌──────────┐    (recoverInterrupted)
+           │                         │ done │     │ rejected │            │
+           │                         └──────┘     └──────────┘            ▼
+           │                                                  sawAmbiguousAttempt = true (one-way)
+           │                                                              │
+           │                                                   attemptCount == 5?
+           │                                                     ┌────┴────┐
+           │                                                    no        yes
+           │                                                     │          │
+           └──── requeued once past nextAttemptAt ────────────── ┘          ▼
+                                                                     ┌──────────────┐
+                                                                     │  unresolved  │
+                                                                     └──────────────┘
 ```
-
-A row found `sending` at cold start is requeued, which is safe **because the id is the idempotency key** — the resend is collapsed by the server rather than moving money twice. `done` and `failed` are terminal.
-
-### Where that state machine is not enough
-
-**`[DESIGN — not built]`, and this is the gap a reviewer should press on.**
-
-Four states cannot express *"we don't know."* The design below splits the terminal states by knowledge instead of by attempt count, and the rest of this section argues why that matters for money.
-
-### The fuller state machine
-
-```
-                    enqueue (always, before any network call)
-                              │
-                              ▼
-                        ┌──────────┐
-          ┌────────────▶│  queued  │◀───────────┐
-          │             └────┬─────┘            │
-          │                  │ lease acquired   │ transport failure,
-          │                  ▼                  │ budget remains
-          │             ┌──────────┐            │
-          │             │ inFlight │────────────┘
-          │             └────┬─────┘
-          │                  │
-          │      ┌───────────┼────────────┬──────────────────┐
-          │      │           │            │                  │
-          │   2xx│        4xx│         timeout /          cold start
-          │      ▼           ▼         killed in flight    finds lease
-          │ ┌─────────┐ ┌──────────┐      │                 expired
-          │ │confirmed│ │ rejected │      │                  │
-          │ └─────────┘ └────┬─────┘      ▼                  ▼
-          │                  │     sawAmbiguousAttempt = true (one-way)
-          │                  │            │                  │
-          │                  │            └────────┬─────────┘
-          │                  │                     ▼
-          │                  │              ┌──────────────────┐
-          │                  │              │ awaitingReconcile│
-          │                  │              └────────┬─────────┘
-          │                  │                       │ budget exhausted
-          │                  │                       ▼
-          │                  │              ┌──────────────┐
-          │                  │              │  unresolved  │
-          │                  │              └──────────────┘
-          │                  │
-          │   user retry     │  user retry after fixing the input
-          └──────────────────┘  (NEW idempotencyKey — provably not processed)
-```
-
-Terminal states are `confirmed`, `rejected`, and `unresolved`. Only `rejected` may be retried with a fresh key.
-
-### Terminal states split by knowledge
-
-**This is the correction that matters most, and an earlier draft of this design got it wrong.** **`[DESIGN — not built]`** — the code currently has a single `failed`, which is exactly the shape this section argues against.
-
-The intuitive design has one `failed` state reached after N attempts, with a Retry button. That is a live double-spend. Consider: attempts 1 and 2 fail to connect, genuinely not processed. Attempt 3 reaches the server, the server debits, and the response times out on a flaky cell. Attempts 4 and 5 fail to connect. The entry lands in `failed`, the user taps Retry, and the money moves twice.
-
-A transport failure is **not evidence the server didn't process it.** So the terminal states are split by what is *known*, not by how many attempts were spent:
 
 | State | Meaning | Hold | User retry |
 |---|---|---|---|
-| `rejected` | Definitive 4xx. **Provably** not processed | Released | Allowed, with a **new** key |
-| `unresolved` | At least one attempt ended ambiguously | **Held indefinitely** | Never auto-resent; never a new key |
+| `done` | The server acknowledged it | Released | — |
+| `rejected` | Definitive refusal (4xx). **Provably** not processed | Released | Allowed, with a **new** key |
+| `unresolved` | At least one attempt was transmitted without a readable answer | **Held indefinitely** | Never auto-resent; never a new key |
 
-A one-way `sawAmbiguousAttempt` flag drives it: any attempt that was transmitted but whose response was not read sets it, and it never clears.
+Only `rejected` may be retried, and only with a fresh idempotency key — the old one is now proven unused. `unresolved` is surfaced as *"We couldn't confirm this transfer. Check your transaction history before trying again,"* not as *"Failed — Retry."* The copy difference is the whole point, and it is why the state exists rather than being folded into `rejected`.
 
-`unresolved` is surfaced as *"We couldn't confirm this transfer. Check your transaction history before trying again,"* not as *"Failed — Retry."* The copy difference is the whole point.
+A row found `sending` at cold start is requeued (via `recoverInterrupted`, `sawAmbiguousAttempt` set) rather than assumed lost — it is safe **because the id is the idempotency key**, so the resend is collapsed by the server rather than moving money twice.
 
 ### Restart is the hard case
 
@@ -427,22 +394,18 @@ The server's keys are namespaced as **the server's tables, not the client's**, s
 
 ### Retry pacing
 
-**Built:** a fixed retry budget of 5 attempts per action, and reachability checked against the network rather than merely "is there an interface up" — captive portals return 200 to their own login page.
+**Built:** a fixed retry budget of 5 attempts per action, reachability checked against the network rather than merely "is there an interface up" (captive portals return 200 to their own login page), and **backoff that is per-entry, persisted as `nextAttemptAt`, exponential, jittered off the entry's own id, and capped around 30 minutes** `[SOURCE: lib/core/sync/pending_action.dart]`. Persisted, because an in-memory backoff resets on restart and produces a thundering herd on the first cold start after a crash loop; jittered, because every client on a cell tower reconnects at the same moment and a shared, un-jittered delay would retry them all in lockstep.
 
 **`[DESIGN — not built]`**, and the reasoning is why:
 
-- **Backoff should be per-entry and persisted** as `nextAttemptAt`, with the drain skipping entries still inside their window. Persisted, because an in-memory backoff resets on restart and produces a thundering herd on the first cold start after a crash loop.
-- **Exponential with jitter**, capped around 30 minutes. Jitter matters because every client on a cell tower reconnects at the same moment.
-- **Failures should be classified.** A 4xx validation error is terminal at attempt 1 — retrying "invalid account number" five times is waste. A 401 refreshes the token and does **not** burn an attempt. 5xx and timeouts are retryable. The `ApiResponse` envelope already carries the status code needed to do this; nothing consumes it yet.
-- **No terminal cap on transport errors.** If a user is offline for a week, the transfer should still go. What changes after N failures is the *UI*, which gains "Having trouble — Retry / Cancel", not the queue, which keeps trying. The current fixed cap of 5 is the expedient choice, and it is the wrong one for money — named here rather than left to be discovered. `[JUDGMENT]`
+- **Failures should be classified by status code.** A 4xx validation error is terminal at attempt 1 — retrying "invalid account number" five times is waste, and the code already gets this right by construction: any answered refusal becomes `rejected` immediately, with no retry, regardless of the attempt count. What is not built is the finer cut *within* that: a 401 should refresh the token and not burn an attempt, and 5xx should retry sooner than a generic transport failure. The `ApiResponse` envelope already carries the status code needed to do this; nothing consumes it yet.
+- **No terminal cap on transport errors.** If a user is offline for a week, the transfer should still go. What changes after N failures is the *UI*, which gains "Having trouble — Retry / Cancel", not the queue, which keeps trying. The current fixed cap of 5 moves the entry to `unresolved` instead, which is the expedient choice, and it is the wrong one for money — named here rather than left to be discovered. `[JUDGMENT]`
 
 ### Ordering without wedging
 
-**`[DESIGN — not built]`** — the queue currently drains every pending action oldest-first, which is correct only because no state yet blocks on a user decision.
+**Built:** the queue drains **the oldest *runnable* entry**, not simply the oldest entry — `PendingAction.isRunnableAt(now)` gates each row in `_drainOnce`, and an unready row is skipped rather than blocking the loop `[SOURCE: lib/core/sync/sync_service.dart]`.
 
-The queue should drain **the oldest *runnable* entry**, not simply the oldest entry.
-
-Strict FIFO plus sequential single-flight plus a head entry awaiting a user decision equals a permanently stuck queue: a send sitting in `unresolved` would leave a NovaSave contribution behind it showing "Pending" forever, with no explanation and no action available.
+Strict FIFO plus sequential single-flight plus a head entry awaiting a user decision would equal a permanently stuck queue: a send sitting in `unresolved` would leave a NovaSave contribution behind it showing "Pending" forever, with no explanation and no action available. This is why skipping matters rather than being an optimization.
 
 FIFO *ordering* is still correct, because both action types debit the same wallet and order decides which wins when funds are tight. But ordering and blocking are different things. Entries that are terminal, awaiting a user decision, or inside their backoff window are skipped. Funds ordering stays safe because a skipped entry's hold remains deducted from the available balance, so the entry that jumps ahead cannot spend money the stuck one reserved.
 
@@ -455,7 +418,9 @@ Per-type lanes are the obvious alternative and are rejected: they break funds or
 | Number | Owner | Rule |
 |---|---|---|
 | **Confirmed** | The server | **Never** mutated client-side. Overwritten wholesale on sync |
-| **Available** | Derived | `confirmed − Σ amountKobo` over all non-terminal entries |
+| **Available** | Derived | `confirmed − Σ amountKobo` over every entry that both **holds funds** (`queued` · `sending` · `unresolved` — `unresolved` is terminal but the hold is not released) **and is outgoing** |
+
+**A queued top-up is deliberately excluded from that sum.** `fund` is money arriving, not leaving, and `PendingActionType.isOutgoing` is false for it — counting it in `pendingKobo()` would shrink the balance for the very top-up meant to grow it.
 
 The wallet home shows available prominently with pending secondary and tappable through to the queue.
 
@@ -596,7 +561,7 @@ The target device is a low-end Android phone, not the simulator on a fast laptop
 
 ## Testing
 
-`492 tests, 100% line coverage` `[VERIFIED]`. The 100% figure is a CI gate, not an achievement — see [tests that lie](#tests-that-lie).
+`589 tests, 100% line coverage` `[VERIFIED]`. The 100% figure is a CI gate, not an achievement — see [tests that lie](#tests-that-lie).
 
 ### The matrix
 
@@ -614,10 +579,10 @@ The target device is a low-end Android phone, not the simulator on a fast laptop
 2. **Idempotency under replay. Built** — *"the same key applied three times moves money once"*, and *"a replay answers with the original transaction"*. The second matters more than it looks: a replay that returns a *fresh* success is indistinguishable from a double-spend at the call site.
 3. **Interrupted send is retried, not lost. Built** — *"a send interrupted mid-flight is retried, not lost"*, plus *"recoverInterrupted requeues a stranded send"*.
 4. **Money round-trip. Built** — `parse(format(k)) == k` across `0, 1, 29, 99, 100, 101` and large values, plus the inputs users actually produce: `".5"`, `"1."`, `"1.005"`, `"₦1,000.00"`, and a twenty-digit paste. Plus exact-equality summation over a list.
-5. **Concurrent trigger race. `[DESIGN — not built]`** — fire connectivity-regained and app-resume in the same microtask, with the API gated on a `Completer` the test controls. This is what would catch the check-then-set-across-an-await bug. The future-chain mutex that fixes that bug **is** in the code; the test pinning it is not, and it **must** use a manual `Completer` — `Future.delayed` makes it pass by accident.
+5. **Concurrent trigger race. Built** — *"connectivity-regained and resume together send once"* fires connectivity-regained and app-resume in the same microtask, with the API gated on a `Completer` the test controls, and asserts the transport was called once, not merely that the ledger holds one entry — a broken guard would still collapse the ledger via server-side dedup, so the ledger check alone proves nothing about the mutex. This is what catches the check-then-set-across-an-await bug, and it was run against the naive bool guard to confirm it actually fails before the mutex went in.
 6. **The balance rule. Built** — *"three offline transfers of half the balance: third refused"*. Queued offline, the third is refused **at enqueue** rather than accepted with a cheerful Pending and bounced on reconnect. Offline over-commitment is the most common real bug in this feature.
 
-A `Clock` is not yet injected. Once backoff exists it must be, because backoff tested against real `Future.delayed` is slow and flaky, and a flaky suite gets deleted. **`[DESIGN — not built]`**
+A `Clock` is injected everywhere the queue or the stand-in server reads the time — `SyncServiceImpl`, `TransferServiceImpl`, `SavingsServiceImpl`, `FundingServiceImpl` — so backoff and ordering are tested against a `TestClock` that advances on command, not real `Future.delayed`. **Built.** The one edge this does not cover: the real device clock and the real server clock can still skew relative to each other, which no client-side `Clock` abstraction fixes. **`[DESIGN — not built]`**
 
 ### Tests that lie
 

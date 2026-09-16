@@ -4,7 +4,16 @@ import 'package:novapay/core/money/money.dart';
 part 'pending_action.freezed.dart';
 part 'pending_action.g.dart';
 
-enum PendingActionType { send, contribute }
+enum PendingActionType {
+  send,
+  contribute,
+
+  /// Money arriving rather than leaving, so it never reduces what may be
+  /// spent while it is queued.
+  fund;
+
+  bool get isOutgoing => this != fund;
+}
 
 /// The terminal states are split by what is **known**, not by how many
 /// attempts were spent. A transport failure is not evidence the server did
@@ -36,7 +45,7 @@ enum PendingActionStatus {
 
 /// Bumped when the stored shape changes, so an older build refuses a row it
 /// cannot read instead of misreading it.
-const int kPendingActionSchemaVersion = 2;
+const int kPendingActionSchemaVersion = 3;
 
 /// How many ambiguous attempts are made before the customer has to decide.
 const int kPendingActionMaxAttempts = 5;

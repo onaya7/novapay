@@ -56,7 +56,10 @@ class WalletRepositoryImpl implements WalletRepository {
       ActivityItem(
         id: action.id,
         title: _titleFor(action),
-        amountKobo: -action.amountKobo,
+        // Funding is money arriving; everything else is money leaving.
+        amountKobo: action.type == PendingActionType.fund
+            ? action.amountKobo
+            : -action.amountKobo,
         occurredAt: action.createdAt,
         status: status,
         failureMessage: action.failureMessage,
@@ -76,6 +79,7 @@ class WalletRepositoryImpl implements WalletRepository {
     PendingActionType.send =>
       'To ${action.payload['recipient'] ?? 'a NovaPay account'}',
     PendingActionType.contribute => 'Savings contribution',
+    PendingActionType.fund => 'Adding to wallet',
   };
 
   ActivityItem _fromTransaction(Transaction transaction) => ActivityItem(

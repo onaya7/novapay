@@ -7,6 +7,7 @@ import 'package:novapay/server/repositories/account_repository.dart';
 import 'package:novapay/server/repositories/idempotency_repository.dart';
 import 'package:novapay/server/repositories/savings_goal_repository.dart';
 import 'package:novapay/server/repositories/transaction_repository.dart';
+import 'package:novapay/server/services/funding_service.dart';
 import 'package:novapay/server/services/savings_service.dart';
 import 'package:novapay/server/services/transfer_service.dart';
 
@@ -26,6 +27,11 @@ abstract class NovaPayApi {
   Future<ApiResponse<Transaction>> transfer({
     required String idempotencyKey,
     required String recipient,
+    required int amountKobo,
+  });
+
+  Future<ApiResponse<Transaction>> fund({
+    required String idempotencyKey,
     required int amountKobo,
   });
 
@@ -53,6 +59,7 @@ class NovaPayApiImpl implements NovaPayApi {
   NovaPayApiImpl(
     this._transfers,
     this._savings,
+    this._funding,
     this._accounts,
     this._transactions,
     this._goals,
@@ -61,6 +68,7 @@ class NovaPayApiImpl implements NovaPayApi {
 
   final TransferService _transfers;
   final SavingsService _savings;
+  final FundingService _funding;
   final AccountRepository _accounts;
   final TransactionRepository _transactions;
   final SavingsGoalRepository _goals;
@@ -140,6 +148,18 @@ class NovaPayApiImpl implements NovaPayApi {
     () => _transfers.execute(
       idempotencyKey: idempotencyKey,
       recipient: recipient,
+      amountKobo: amountKobo,
+    ),
+    successCode: 201,
+  );
+
+  @override
+  Future<ApiResponse<Transaction>> fund({
+    required String idempotencyKey,
+    required int amountKobo,
+  }) => _handle(
+    () => _funding.execute(
+      idempotencyKey: idempotencyKey,
       amountKobo: amountKobo,
     ),
     successCode: 201,

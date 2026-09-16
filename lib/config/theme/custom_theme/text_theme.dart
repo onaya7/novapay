@@ -1,10 +1,11 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:novapay/config/theme/app_theme_colors.dart';
+import 'package:novapay/gen/fonts.gen.dart';
 
 /// The type scale. `bodyMedium` at 14/22 is the default body style.
 abstract class TTextTheme {
   /// Declared in `pubspec.yaml`; the files are licensed under OFL-1.1.
-  static const String fontFamily = 'PlusJakartaSans';
+  static const String fontFamily = FontFamily.plusJakartaSans;
 
   static const FontWeight _regular = FontWeight.w500;
   static const FontWeight _bold = FontWeight.w700;

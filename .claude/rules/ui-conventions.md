@@ -50,7 +50,7 @@ amount-entry figure. **Nothing renders below 10px, and nothing essential below 1
 is for non-essential metadata only.
 
 The ramp uses **two weights only**, `w500` for body and `w700` for headings and labels, because only
-those two are bundled. Asking for `w400` or `w600` silently synthesises and looks wrong.
+those two are bundled. Asking for `w400` or `w600` silently synthesizes and looks wrong.
 
 **The app respects the system font scale and never clamps it.** That makes every height in
 `AppSize` a *minimum*: use `ConstrainedBox(minHeight:)`, never `SizedBox(height:)`, on anything
@@ -78,6 +78,7 @@ All in `lib/core/components/`.
 | Pending, Sent or Rejected state on a row | `StatusChip` |
 | Any amount of money on screen | `MoneyText` |
 | Spinner, skeleton, error, empty, pull-to-refresh body | `state_widgets.dart` |
+| The app's bottom nav | `CustomNavigationBar` + `NavigationTab` — only `AppShell` builds one |
 
 - **Scaffolds:** wrap every screen in `CustomScaffold`, never a bare `Scaffold`. A pinned CTA goes
   in `bottomBar:`, never in a `Column` with an `Expanded` above it — that overflows into the button

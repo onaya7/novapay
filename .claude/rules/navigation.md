@@ -9,7 +9,17 @@ paths:
 There is **no router package** in this app. `go_router` is not a dependency and `UiHelpers` does
 not exist, so ignore any guidance that assumes them.
 
-Navigation is plain `Navigator`:
+## The shell
+`AppShell` (`lib/app/view/app_shell.dart`) holds the four tabs — Wallet · Savings · Activity ·
+Profile — in an `IndexedStack`, each keeping its own scroll position and cubit across a switch.
+`NavCubit` (`@injectable`, provided by `AppShell`) holds the current index; `CustomNavigationBar`
+renders it. **A destination that is already a tab is reached by switching tab
+(`context.read<NavCubit>().select(index)`), never by pushing a second copy of it** — that is why the
+wallet's `Save` and `History` actions, and the Activity section header, all call `select` instead of
+`Navigator.push`. Tasks — `SendMoneyPage`, `AddMoneyPage`, the NovaSave sub-screens — are still
+pushed, because they are not tabs.
+
+Navigation between everything else is plain `Navigator`:
 
 ```dart
 Navigator.of(context).push(

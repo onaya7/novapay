@@ -190,6 +190,10 @@ class SyncServiceImpl implements SyncService {
           goalId: attempt.payload['goalId'] as String,
           amountKobo: attempt.amountKobo,
         ),
+        PendingActionType.fund => await _api.fund(
+          idempotencyKey: attempt.id,
+          amountKobo: attempt.amountKobo,
+        ),
       };
       await _replace(_settle(attempt, response));
     } on Object {
@@ -206,9 +210,11 @@ class SyncServiceImpl implements SyncService {
       ? attempt.succeeded()
       : attempt.refused(response.message);
 
+  /// Only money on its way *out* is held. A queued top-up is money arriving,
+  /// and counting it here would shrink the balance for adding to it.
   @override
   int pendingKobo() => actions()
-      .where((action) => action.status.holdsFunds)
+      .where((action) => action.status.holdsFunds && action.type.isOutgoing)
       .fold(0, (sum, action) => sum + action.amountKobo);
 
   @override

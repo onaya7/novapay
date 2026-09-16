@@ -5,6 +5,7 @@ import 'package:novapay/server/repositories/account_repository.dart';
 import 'package:novapay/server/repositories/idempotency_repository.dart';
 import 'package:novapay/server/repositories/savings_goal_repository.dart';
 import 'package:novapay/server/repositories/transaction_repository.dart';
+import 'package:novapay/server/services/funding_service.dart';
 import 'package:novapay/server/services/savings_service.dart';
 import 'package:novapay/server/services/transfer_service.dart';
 
@@ -40,6 +41,7 @@ NovaPayApiImpl buildApi(
   return NovaPayApiImpl(
     TransferServiceImpl(accounts, transactions, idempotency, time),
     SavingsServiceImpl(goals, accounts, transactions, idempotency, time),
+    FundingServiceImpl(accounts, transactions, idempotency, time),
     accounts,
     transactions,
     goals,

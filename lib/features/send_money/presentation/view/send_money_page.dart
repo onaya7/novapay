@@ -6,6 +6,7 @@ import 'package:novapay/core/components/custom_button.dart';
 import 'package:novapay/core/components/custom_scaffold.dart';
 import 'package:novapay/core/constants/app_size.dart';
 import 'package:novapay/core/injections/injection.dart';
+import 'package:novapay/features/funding/presentation/view/add_money_page.dart';
 import 'package:novapay/features/send_money/domain/entities/transfer_draft.dart';
 import 'package:novapay/features/send_money/presentation/cubit/send_money_cubit.dart';
 import 'package:novapay/features/send_money/presentation/widgets/send_money_widgets.dart';
@@ -108,7 +109,7 @@ class _StepCta extends StatelessWidget {
         !draft.hasEnough) {
       return CustomButton(
         label: 'Fund Wallet',
-        onPressed: () => _notYet(context),
+        onPressed: () => _openAddMoney(context),
       );
     }
 
@@ -139,10 +140,9 @@ class _StepCta extends StatelessWidget {
     );
   }
 
-  void _notYet(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Funding is not part of this build yet.')),
-    );
+  void _openAddMoney(BuildContext context) {
+    Navigator.of(context)
+        .push(MaterialPageRoute<void>(builder: (_) => const AddMoneyPage()));
   }
 }
 

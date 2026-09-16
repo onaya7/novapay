@@ -2,18 +2,20 @@ import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:novapay/app/presentation/cubit/nav_cubit.dart';
 import 'package:novapay/core/components/custom_scaffold.dart';
 import 'package:novapay/core/components/section_header.dart';
 import 'package:novapay/core/components/state_widgets.dart';
 import 'package:novapay/core/constants/app_size.dart';
 import 'package:novapay/core/extensions/date_time_extension.dart';
 import 'package:novapay/core/injections/injection.dart';
-import 'package:novapay/features/savings/presentation/view/savings_page.dart';
+import 'package:novapay/features/funding/presentation/view/add_money_page.dart';
+import 'package:novapay/features/profile/presentation/cubit/profile_cubit.dart';
 import 'package:novapay/features/send_money/presentation/view/send_money_page.dart';
 import 'package:novapay/features/wallet/domain/entities/wallet_snapshot.dart';
 import 'package:novapay/features/wallet/presentation/cubit/wallet_cubit.dart';
 import 'package:novapay/features/wallet/presentation/widgets/wallet_widgets.dart';
-import 'package:novapay/l10n/l10n.dart';
+import 'package:novapay/gen/assets.gen.dart';
 
 class WalletPage extends StatelessWidget {
   const new({super.key});
@@ -37,6 +39,7 @@ class WalletView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return CustomScaffold(
+      showBackButton: false,
       padding: EdgeInsets.zero,
       body: RefreshIndicator(
         onRefresh: () => context.read<WalletCubit>().refresh(),
@@ -146,19 +149,26 @@ class _Header extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         WalletHeader(
-          title: context.l10n.walletTitle,
+          title: context.watch<ProfileCubit>().state.profile.greetingName,
           greeting: DateTime.now().greeting,
+          avatar: Assets.images.profile.provider(),
         ),
         AppSize.h(AppSize.md),
         BalanceCard(snapshot: snapshot),
         AppSize.h(AppSize.md),
         WalletActions(
           onSend: () => _openSendMoney(context),
-          onSave: () => _openSavings(context),
+          onAddMoney: () => _openAddMoney(context),
+          onSave: () => _goToTab(context, 1),
+          onHistory: () => _goToTab(context, 2),
         ),
         if (showActivityLabel) ...[
           AppSize.h(AppSize.lg),
-          const SectionHeader(title: 'Activity'),
+          SectionHeader(
+            title: 'Activity',
+            actionLabel: 'See all',
+            onAction: () => _goToTab(context, 2),
+          ),
         ],
       ],
     );
@@ -169,8 +179,13 @@ class _Header extends StatelessWidget {
         .push(MaterialPageRoute<void>(builder: (_) => const SendMoneyPage()));
   }
 
-  void _openSavings(BuildContext context) {
+  /// Savings and Activity are destinations, so they switch tab rather than
+  /// pushing a second copy over the shell.
+  void _goToTab(BuildContext context, int index) =>
+      context.read<NavCubit>().select(index);
+
+  void _openAddMoney(BuildContext context) {
     Navigator.of(context)
-        .push(MaterialPageRoute<void>(builder: (_) => const SavingsPage()));
+        .push(MaterialPageRoute<void>(builder: (_) => const AddMoneyPage()));
   }
 }

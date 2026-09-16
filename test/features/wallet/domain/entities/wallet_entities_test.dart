@@ -26,10 +26,17 @@ void main() {
       expect(_item(amountKobo: 500000).isDebit, isFalse);
     });
 
-    test('only the exceptions are annotated', () {
-      expect(_item().needsChip, isFalse);
-      expect(_item(status: ActivityStatus.pending).needsChip, isTrue);
-      expect(_item(status: ActivityStatus.unresolved).needsChip, isTrue);
+    test('only an outcome that needs acting on carries a note', () {
+      expect(_item().note, isNull);
+      expect(_item(status: ActivityStatus.pending).note, isNull);
+      expect(
+        _item(status: ActivityStatus.unresolved).note,
+        contains("couldn't confirm"),
+      );
+      expect(
+        _item(status: ActivityStatus.rejected).note,
+        'This one did not go through.',
+      );
     });
   });
 

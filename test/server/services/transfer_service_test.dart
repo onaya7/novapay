@@ -9,6 +9,8 @@ import 'package:novapay/server/repositories/idempotency_repository.dart';
 import 'package:novapay/server/repositories/transaction_repository.dart';
 import 'package:novapay/server/services/transfer_service.dart';
 
+import '../../helpers/server_harness.dart';
+
 void main() {
   late Directory tempDir;
   late Box<dynamic> box;
@@ -25,7 +27,12 @@ void main() {
     accounts = AccountRepositoryImpl(db);
     transactions = TransactionRepositoryImpl(db);
     idempotency = IdempotencyRepositoryImpl(db);
-    service = TransferServiceImpl(accounts, transactions, idempotency);
+    service = TransferServiceImpl(
+      accounts,
+      transactions,
+      idempotency,
+      TestClock(),
+    );
   });
 
   tearDown(() async {

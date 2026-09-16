@@ -3,27 +3,64 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:novapay/app/app.dart';
+import 'package:novapay/app/presentation/cubit/nav_cubit.dart';
+import 'package:novapay/app/presentation/cubit/theme_cubit.dart';
 import 'package:novapay/config/theme/app_theme.dart';
 import 'package:novapay/config/theme/app_theme_colors.dart';
 import 'package:novapay/core/injections/injection.dart';
+import 'package:novapay/features/profile/presentation/cubit/profile_cubit.dart';
+import 'package:novapay/features/savings/presentation/cubit/savings_cubit.dart';
 import 'package:novapay/features/wallet/presentation/cubit/wallet_cubit.dart';
 import 'package:novapay/features/wallet/presentation/view/wallet_page.dart';
 
 class _MockWalletCubit extends MockCubit<WalletState> implements WalletCubit;
 
-void main() {
-  late _MockWalletCubit cubit;
+class _MockSavingsCubit extends MockCubit<SavingsState> implements SavingsCubit;
 
+class _MockThemeCubit extends MockCubit<AppThemeMode> implements ThemeCubit;
+
+class _MockProfileCubit extends MockCubit<ProfileState> implements ProfileCubit;
+
+void main() {
   setUp(() {
-    cubit = _MockWalletCubit();
-    when(cubit.start).thenAnswer((_) async {});
-    when(cubit.refresh).thenAnswer((_) async {});
+    final wallet = _MockWalletCubit();
+    when(wallet.start).thenAnswer((_) async {});
+    when(wallet.refresh).thenAnswer((_) async {});
     whenListen(
-      cubit,
+      wallet,
       const Stream<WalletState>.empty(),
       initialState: const WalletState.loading(),
     );
-    sl.registerFactory<WalletCubit>(() => cubit);
+    sl.registerFactory<WalletCubit>(() => wallet);
+
+    final savings = _MockSavingsCubit();
+    when(savings.start).thenAnswer((_) async {});
+    when(savings.refresh).thenAnswer((_) async {});
+    whenListen(
+      savings,
+      const Stream<SavingsState>.empty(),
+      initialState: const SavingsState.loading(),
+    );
+    sl.registerFactory<SavingsCubit>(() => savings);
+
+    final theme = _MockThemeCubit();
+    whenListen(
+      theme,
+      const Stream<AppThemeMode>.empty(),
+      initialState: AppThemeMode.system,
+    );
+    sl.registerFactory<ThemeCubit>(() => theme);
+
+    final profile = _MockProfileCubit();
+    when(profile.start).thenAnswer((_) async {});
+    whenListen(
+      profile,
+      const Stream<ProfileState>.empty(),
+      initialState: const ProfileState.loading(),
+    );
+    sl.registerFactory<ProfileCubit>(() => profile);
+
+    sl.registerFactory<NavCubit>(NavCubit.new);
   });
 
   tearDown(sl.reset);

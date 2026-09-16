@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:novapay/core/components/quick_action_tile.dart';
@@ -9,6 +11,80 @@ import 'package:novapay/features/wallet/domain/entities/wallet_snapshot.dart';
 import 'package:novapay/features/wallet/presentation/widgets/wallet_widgets.dart';
 
 import '../../../../helpers/helpers.dart';
+
+// A 1x1 transparent PNG, so the avatar test does not depend on a real asset
+// bundle being registered for this test.
+final _pixel = MemoryImage(
+  Uint8List.fromList(<int>[
+    0x89,
+    0x50,
+    0x4e,
+    0x47,
+    0x0d,
+    0x0a,
+    0x1a,
+    0x0a,
+    0x00,
+    0x00,
+    0x00,
+    0x0d,
+    0x49,
+    0x48,
+    0x44,
+    0x52,
+    0x00,
+    0x00,
+    0x00,
+    0x01,
+    0x00,
+    0x00,
+    0x00,
+    0x01,
+    0x08,
+    0x06,
+    0x00,
+    0x00,
+    0x00,
+    0x1f,
+    0x15,
+    0xc4,
+    0x89,
+    0x00,
+    0x00,
+    0x00,
+    0x0a,
+    0x49,
+    0x44,
+    0x41,
+    0x54,
+    0x78,
+    0x9c,
+    0x63,
+    0x00,
+    0x01,
+    0x00,
+    0x00,
+    0x05,
+    0x00,
+    0x01,
+    0x0d,
+    0x0a,
+    0x2d,
+    0xb4,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x49,
+    0x45,
+    0x4e,
+    0x44,
+    0xae,
+    0x42,
+    0x60,
+    0x82,
+  ]),
+);
 
 ActivityItem _item({
   int amountKobo = -500000,
@@ -124,6 +200,20 @@ void main() {
       expect(find.text('Wallet'), findsOneWidget);
       expect(find.byType(AppAvatar), findsOneWidget);
     });
+
+    testWidgets('an avatar image is passed through to AppAvatar', (
+      tester,
+    ) async {
+      await tester.pumpApp(
+        WalletHeader(
+          title: 'Wallet',
+          greeting: 'Good afternoon',
+          avatar: _pixel,
+        ),
+      );
+
+      expect(tester.widget<AppAvatar>(find.byType(AppAvatar)).image, _pixel);
+    });
   });
 
   group('ActivityRow', () {
@@ -199,35 +289,36 @@ void main() {
   });
 
   group('WalletActions', () {
-    testWidgets('Send is live and named', (tester) async {
+    testWidgets('all four tiles are live and named', (tester) async {
       var sends = 0;
-      await tester.pumpApp(WalletActions(onSend: () => sends++));
-
-      expect(find.text('Send'), findsOneWidget);
-      await tester.tap(find.text('Send'));
-      expect(sends, 1);
-    });
-
-    testWidgets('what is not built yet stays visible and dead', (tester) async {
-      await tester.pumpApp(WalletActions(onSend: () {}));
+      var addMoneys = 0;
+      var saves = 0;
+      var histories = 0;
+      await tester.pumpApp(
+        WalletActions(
+          onSend: () => sends++,
+          onAddMoney: () => addMoneys++,
+          onSave: () => saves++,
+          onHistory: () => histories++,
+        ),
+      );
 
       expect(find.byType(QuickActionTile), findsNWidgets(4));
       final tiles = tester
           .widgetList<QuickActionTile>(find.byType(QuickActionTile))
           .toList();
-      expect(tiles[0].onTap, isNotNull);
-      expect(tiles[1].onTap, isNull);
-      expect(tiles[2].onTap, isNull);
-      expect(tiles[3].onTap, isNull);
-      expect(find.text('Add money'), findsOneWidget);
-    });
+      for (final tile in tiles) {
+        expect(tile.onTap, isNotNull);
+      }
 
-    testWidgets('Save wires up once it is given a callback', (tester) async {
-      var saves = 0;
-      await tester.pumpApp(WalletActions(onSend: () {}, onSave: () => saves++));
-
+      await tester.tap(find.text('Send'));
+      expect(sends, 1);
+      await tester.tap(find.text('Add money'));
+      expect(addMoneys, 1);
       await tester.tap(find.text('Save'));
       expect(saves, 1);
+      await tester.tap(find.text('History'));
+      expect(histories, 1);
     });
   });
 

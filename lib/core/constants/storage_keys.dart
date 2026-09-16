@@ -4,6 +4,7 @@ abstract class StorageKeys {
   static const String locale = 'locale';
   static const String pendingActions = 'pending_actions';
   static const String confirmedBalanceKobo = 'confirmed_balance_kobo';
+  static const String displayName = 'display_name';
 
   // Secure storage (flutter_secure_storage) — sensitive
   static const String authToken = 'auth_token';

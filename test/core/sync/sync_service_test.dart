@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -7,11 +8,83 @@ import 'package:novapay/core/local_data/local_data_storage.dart';
 import 'package:novapay/core/network_info/network_info.dart';
 import 'package:novapay/core/sync/pending_action.dart';
 import 'package:novapay/core/sync/sync_service.dart';
+import 'package:novapay/server/models/api_response.dart';
+import 'package:novapay/server/models/savings_goal.dart';
+import 'package:novapay/server/models/transaction.dart';
 import 'package:novapay/server/novapay_api.dart';
 
 import '../../helpers/server_harness.dart';
 
 class _MockNetworkInfo extends Mock implements NetworkInfo;
+
+/// Holds every transfer open until the test releases it, so two drains can be
+/// put in flight at once on purpose. A `Future.delayed` here would let the
+/// first drain finish before the second started, and the test would pass
+/// whether or not the mutex worked.
+class _GatedApi implements NovaPayApi {
+  _GatedApi(this._inner);
+
+  final NovaPayApi _inner;
+  final Completer<void> gate = Completer<void>();
+  int transferCalls = 0;
+
+  @override
+  Future<ApiResponse<Transaction>> transfer({
+    required String idempotencyKey,
+    required String recipient,
+    required int amountKobo,
+  }) async {
+    transferCalls++;
+    await gate.future;
+    return await _inner.transfer(
+      idempotencyKey: idempotencyKey,
+      recipient: recipient,
+      amountKobo: amountKobo,
+    );
+  }
+
+  @override
+  Future<ApiResponse<Transaction>> fund({
+    required String idempotencyKey,
+    required int amountKobo,
+  }) => _inner.fund(idempotencyKey: idempotencyKey, amountKobo: amountKobo);
+
+  @override
+  ApiResponse<int> balance() => _inner.balance();
+
+  @override
+  ApiResponse<List<Transaction>> transactions() => _inner.transactions();
+
+  @override
+  ApiResponse<List<SavingsGoal>> goals() => _inner.goals();
+
+  @override
+  ApiResponse<SavingsGoal> goal(String id) => _inner.goal(id);
+
+  @override
+  Future<ApiResponse<SavingsGoal>> contribute({
+    required String idempotencyKey,
+    required String goalId,
+    required int amountKobo,
+  }) => _inner.contribute(
+    idempotencyKey: idempotencyKey,
+    goalId: goalId,
+    amountKobo: amountKobo,
+  );
+
+  @override
+  Future<ApiResponse<SavingsGoal>> createGoal({
+    required String id,
+    required String name,
+    required int targetKobo,
+    required DateTime targetDate,
+  }) => _inner.createGoal(
+    id: id,
+    name: name,
+    targetKobo: targetKobo,
+    targetDate: targetDate,
+  );
+}
 
 void main() {
   late Directory tempDir;
@@ -251,6 +324,52 @@ void main() {
     });
   });
 
+  group('funding', () {
+    test('a queued top-up credits the wallet', () async {
+      await service.enqueue(
+        type: PendingActionType.fund,
+        amountKobo: 500000,
+        payload: const {},
+      );
+      expect(backend.balance().requireData, 24800000);
+
+      online(connected: true);
+      await service.drain();
+
+      expect(backend.balance().requireData, 25300000);
+      expect(service.actions().single.status, PendingActionStatus.done);
+    });
+  });
+
+  group('two triggers at once', () {
+    test('connectivity-regained and resume together send once', () async {
+      // Queued offline, so enqueue's own drain cannot consume it first.
+      final action = await queueTransfer();
+      online(connected: true);
+
+      final gated = _GatedApi(backend);
+      final racing = SyncServiceImpl(db, gated, network, clock);
+      addTearDown(racing.dispose);
+
+      // Both in the same microtask, which is exactly what connectivity and
+      // app-resume do when a phone comes back.
+      final first = racing.drain();
+      final second = racing.drain();
+      gated.gate.complete();
+      await Future.wait([first, second]);
+
+      // This is the assertion that tests the mutex. The ledger check below
+      // would pass even with a broken guard, because both drains would carry
+      // the same idempotency key and the server would collapse the second.
+      expect(gated.transferCalls, 1);
+
+      expect(backend.transactions().requireData, hasLength(1));
+      expect(backend.balance().requireData, 24300000);
+      expect(racing.actions().single.id, action.id);
+      expect(racing.actions().single.status, PendingActionStatus.done);
+    });
+  });
+
   group('across a restart', () {
     test('a queued action survives and then sends exactly once', () async {
       // Queued while offline.
@@ -258,14 +377,14 @@ void main() {
       expect(backend.transactions().requireData, isEmpty);
 
       // Relaunch: new service and backend over the same database.
-      final backendAfter = buildApi(db);
+      final backendAfter = buildApi(db, clock: clock);
       final networkAfter = _MockNetworkInfo();
       when(() => networkAfter.isConnected).thenAnswer((_) async => true);
       final serviceAfter = SyncServiceImpl(
         db,
         backendAfter,
         networkAfter,
-        TestClock(),
+        clock,
       );
       addTearDown(serviceAfter.dispose);
 

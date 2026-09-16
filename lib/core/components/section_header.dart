@@ -30,16 +30,18 @@ class SectionHeader extends StatelessWidget {
   }
 }
 
-/// A brand-tinted circle carrying an icon, for a surface with no photo.
+/// A brand-tinted circle carrying an icon, or a photo when one is given.
 class AppAvatar extends StatelessWidget {
-  const new({required this.icon, this.size = 44, super.key});
+  const new({required this.icon, this.image, this.size = 44, super.key});
 
   final IconData icon;
+  final ImageProvider? image;
   final double size;
 
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
+    final photo = image;
     return Container(
       height: size,
       width: size,
@@ -47,8 +49,13 @@ class AppAvatar extends StatelessWidget {
       decoration: BoxDecoration(
         color: colors.brandSubtle,
         shape: BoxShape.circle,
+        image: photo == null
+            ? null
+            : DecorationImage(image: photo, fit: BoxFit.cover),
       ),
-      child: Icon(icon, size: AppSize.iconMd, color: colors.primaryStrong),
+      child: photo == null
+          ? Icon(icon, size: AppSize.iconMd, color: colors.primaryStrong)
+          : null,
     );
   }
 }

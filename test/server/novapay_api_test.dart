@@ -159,6 +159,33 @@ void main() {
     });
   });
 
+  group('fund', () {
+    test('credits the wallet and answers 201 with the entry', () async {
+      final response = await api.fund(idempotencyKey: 'f1', amountKobo: 500000);
+
+      expect(response.isSuccess, isTrue);
+      expect(response.code, 201);
+      expect(response.requireData.amountKobo, 500000);
+      expect(response.requireData.title, 'Added to wallet');
+      expect(balance(), 25300000);
+    });
+
+    test('the same key applied twice credits once', () async {
+      await api.fund(idempotencyKey: 'f1', amountKobo: 500000);
+      final replay = await api.fund(idempotencyKey: 'f1', amountKobo: 500000);
+
+      expect(replay.requireData.id, 'f1');
+      expect(balance(), 25300000);
+    });
+
+    test('a zero amount is refused with 422', () async {
+      final response = await api.fund(idempotencyKey: 'f1', amountKobo: 0);
+
+      expect(response.code, 422);
+      expect(balance(), 24800000);
+    });
+  });
+
   group('goals', () {
     test('a goal is created, then contributed to', () async {
       final created = await api.createGoal(
