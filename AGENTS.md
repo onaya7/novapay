@@ -1,8 +1,6 @@
 # Novapay — agent guide
 
-This app was adopted onto onaya7's flutter-agent-kit; `.kit.json` records the kit commit and marks
-it adopted. It was **not** scaffolded from the kit's base app, so parts of the kit's standard setup
-are absent. Where this file and a kit skill disagree, this file wins.
+Where a skill or a general Flutter convention disagrees with this file, this file wins.
 
 ## Toolchain
 - Flutter is pinned with FVM: `.fvmrc` selects **3.47.2** (Dart 3.13). **Prefix every `flutter` and
@@ -45,11 +43,21 @@ the state-management rules are enforced, not advisory.
 - Blocs and cubits never import Flutter (`avoid_flutter_imports`).
 - **Never import one feature's internals from another.** Promote the shared piece to `core/`.
 
-**Not present yet**, so the rules that reference them are aspirational until ported from the kit's
-base app: `ApiClient`, `InternetSafeRunner`, `EitherSafeRunner`, `Failure`/`AppException`,
-`UseCase`, the get_it container (`sl`), `UiHelpers`, `AppColor`/`AppThemeColors`,
-`lib/core/components/`, `AppUrl`/`Env`, and `.env.*` flavor config. `lib/counter/` is Very Good CLI
-scaffold and gets deleted when real features land.
+**Not present yet**, so any rule that references them is aspirational: `ApiClient`, `UiHelpers`,
+`AppUrl`/`Env`, and `.env.*` flavor config. `lib/counter/` is Very Good CLI scaffold and gets
+deleted when real features land.
+
+## Design system
+Tokens live in `lib/config/theme/` (`AppThemeColors`, `TTextTheme`, `AppTheme`) and
+`lib/core/constants/` (`AppColor`, `AppSize`). Components live in `lib/core/components/`.
+`.claude/rules/ui-conventions.md` lists the ten color roles, the ten type styles and the five
+components that exist — **only those exist**, so do not reach for a kit component it does not name.
+
+Two rules that constrain layout rather than decorate it:
+- **White on brand is 4.43:1**, so it is legal only at ≥24px or ≥18.66px bold; anything smaller on
+  brand uses `primaryStrong`.
+- **The system font scale is never clamped**, so every height in `AppSize` is a minimum. Use
+  `ConstrainedBox(minHeight:)` on anything containing text.
 
 ## Two conventions that will trip a reader
 - Widgets import **`package:material_ui/material_ui.dart`**, not `package:flutter/material.dart`.
@@ -80,8 +88,8 @@ Claude Code loads these automatically; other agents must open them.
 | generated output, `lib/gen/**`, `lib/l10n/**`, `pubspec.yaml`, `analysis_options.yaml` | `.claude/rules/generated-code.md` |
 
 ## Skills
-From the kit, installed per agent rather than stored here: `add-feature`, `add-route`,
-`paginate-list`, `add-picker-sheet`, `codegen`, `ship-flavor`, `sync-app`, `update-kit`, `adopt-app`.
+Installed per agent rather than stored here: `add-feature`, `add-route`, `paginate-list`,
+`add-picker-sheet`, `codegen`, `ship-flavor`.
 
 ## Git
 Conventional Commits. CI runs on `main`. `docs/*.pptx` is generated and git-ignored.

@@ -416,7 +416,7 @@ One question this design would ask a real backend team: **what is the idempotenc
 
 ## Design system and UI quality
 
-Two concerns govern the UI, and they have different jurisdictions. **The design system decides what it renders as. The UI quality rules decide whether it behaves like a production app.** Where they conflict, the design system wins, because its values were measured from a shipping product rather than recommended in the abstract.
+A token set plus a small number of rules that are enforced rather than suggested. Every value below is either measured or carries its reason, because a design system nobody can argue with is one nobody follows.
 
 ### Tokens
 
@@ -436,20 +436,16 @@ A three-layer token model is used: `Primitives` → `Semantic` → components. *
 | `feedback/warning` | `#ff8f00` | `#ffb300` |
 | `feedback/danger` | `#fc2d2d` | `#fc2d2d` |
 
-Scale: spacing on a 4pt rhythm (`4 8 12 16 20 24 32 40 48 64`), radius favoring 10 and 16, icons at **16 / 20 / 24 only**, minimum touch target **44**. Type is the 14-style ramp with `Body/Medium` 14/22 as the default. Production font is **Satoshi**; the design file substitutes Plus Jakarta Sans because Satoshi cannot load in that environment, and this app follows the same substitute-and-say-so discipline where the font is unavailable.
+Scale: spacing on a 4pt rhythm (`4 8 12 16 20 24 32 40 48 64`), radius favoring 10 and 16, icons at **16 / 20 / 24 only**, minimum touch target **44**. Type is a ten-style ramp with `Body/Medium` 14/22 as the default.
+
+**No custom font is bundled.** A typeface is 100–400KB per weight before it renders a single pixel, and this app targets a device and a network where that is not free. The platform face costs nothing, is already hinted for the screen, and a ramp defined by size and weight survives a font swap where hand-tuned letter spacing would not. `[JUDGMENT]`
 
 **Never branch on `Theme.of(context).brightness` to pick a color.** An `isDark ? a : b` pair is a semantic role that has not been named yet; add the field instead. No raw `Color(0x...)` literals in widgets.
 
-### Where the two references disagree
+### Two rules that are easy to get wrong
 
-- **The design-system generator was run and its recommendation rejected.** Queried for a fintech mobile wallet, it returned a dark-only theme, gold `#F59E0B` with purple `#8B5CF6`, and IBM Plex Sans. That contradicts a brand that is already decided, proposes dark-only for a system that is light-first with a dark twin, and shipped a *web* checklist — `cursor-pointer`, hover states, 1440px breakpoints — for a Flutter mobile app. Its **rule layers are kept**; its palette, style and typography recommendation is discarded. `[JUDGMENT]`
-- **Icons.** General UI guidance and the design system name different icon libraries; the library choice follows the design system. The underlying *principle* is identical in both and is what actually matters: one family, one weight, vector only, **no emoji as icons**, sizes snapped to a token ramp, and a 44pt frame plus an accessibility label on every icon-only control.
-
-### Where they independently agree
-
-Worth naming, because two sources reaching the same rule from different directions is the strongest form of citation.
-
-**Sub-12px type.** General UI guidance says never render critical text below 12pt, and the design system's own accessibility review reached the same conclusion independently, with the remedy: map 8px to `Caption` 10/14, 10px body to `Body/Small` 12/20, and keep 10px only for `Label/Small` and `Overline` on non-essential metadata. Same rule, two sources, and it is adopted.
+- **Icons.** One family, one weight, vector only, **no emoji as icons**, sizes snapped to the 16/20/24 ramp, and a 44pt frame plus an accessibility label on every icon-only control. The family matters less than picking one and not mixing.
+- **Sub-12px type.** Nothing that carries meaning renders below 12pt. `Label/Small` at 10/14 exists and is for non-essential metadata only — an overline, a row of small print. Body copy never reaches for it, and neither does anything a user has to read to complete a transfer.
 
 ### Interaction detail
 
@@ -464,23 +460,21 @@ The difference between a production app and a generated one is mostly here:
 - Buttons name the action: `Send ₦5,000.00`, `Fund Wallet`, `Create goal`. Not `Continue`, `Proceed` or `Submit`.
 - Error copy follows three beats — what happened, what it means, what to do — and never shows a raw error code.
 
-### The Pending chip, derived rather than invented
+### The Pending chip, and why it isn't amber
 
-The design system carries **no** offline, pending, queued, retry or toast convention. Confirmed by exhaustive search rather than assumed, and said plainly here rather than implied.
+Pending is the one state the token set does not already answer, because it is the only thing in the app that is neither success nor failure. It is worth showing the working.
 
-So the chip is **derived from the design system's own status-chip rule**, which is explicit:
+The obvious build is a filled amber pill with amber text. Measured, that is `#ffb300` on `#ff8f00` — **1.27:1** in dark. Unreadable, and it is the state a user most needs to read.
 
-> Do not build a filled tone chip with tone text. It will fail review in both themes.
+So the chip is a neutral `bg/subtle` pill, a 6px dot in the tone color, and the label in `text/primary`. That measures roughly 19:1 in light and 11:1 in dark, and it carries the state in the **word** as well as the color, which is what the do-not-signal-by-color-alone rule actually requires. The same shape then serves every tone, so `Unresolved` and `Rejected` cost nothing extra.
 
-Measured, a filled amber Pending chip is `#ffb300` on `#ff8f00` — **1.27:1** in dark. The mandated pattern instead is a neutral `bg/subtle` pill, a 6px dot in the tone color, and the label in `text/primary`. That measures roughly 19:1 in light and 11:1 in dark, and it carries the state in the **word** as well as the color, which also satisfies the do-not-signal-by-color-alone rule.
-
-**Only exception rows get a chip.** The same source again: *"the activity list annotates the exception, not the rule… a list where every row is badged has no signal in the badge."* Settled transactions carry no chip. `Pending`, `Unresolved` and `Rejected` do.
+**Only exception rows get a chip.** A list where every row is badged has no signal in the badge. Settled transactions carry none.
 
 ---
 
 ## Accessibility
 
-The brief makes this non-negotiable `[SOURCE: brief §2.2]`, and it is worth being honest that neither reference fully covers it: the design system's accessibility material is a **color-contrast measurement log** with no screen-reader, focus-order, or font-scale rules at all. Those are derived below and flagged as derived.
+The brief makes this non-negotiable `[SOURCE: brief §2.2]`. Contrast is a measurement and is treated as one; the screen-reader, focus-order and font-scale rules below are judgment, and are marked where they are.
 
 ### Contrast rules that constrain the layout
 
@@ -501,7 +495,7 @@ The brief makes this non-negotiable `[SOURCE: brief §2.2]`, and it is worth bei
 
 The app respects the system font scale. It does **not** clamp it to 1.0, which is the common shortcut and defeats the requirement.
 
-**This genuinely conflicts with the design system, and the conflict is named rather than hidden.** The design system specifies fixed heights — list rows at 66 and 72, CTAs at 52, fields at 48 and 52. Honoring the system font scale means **those become minimums, not fixed values**. Rows grow, and the layout is built to let them: no fixed-height text containers, no `maxLines: 1` on a label that carries meaning, wrapping preferred over truncation.
+**That collides with the token set, and the collision is named rather than hidden.** Tokens specify heights — list rows at 66, CTAs and fields at 52. Honoring the system font scale means **those are minimums, not fixed values**: `ConstrainedBox(minHeight:)`, never `SizedBox(height:)`, on anything containing text. Rows grow, and the layout is built to let them — no fixed-height text containers, no `maxLines: 1` on a label that carries meaning, wrapping preferred over truncation.
 
 The layout is verified at the largest system font size as part of review, not assumed.
 
@@ -563,7 +557,7 @@ Every judgment the brief's ambiguities forced.
 | 3 | Pending spend reduces available balance and is enforced at enqueue | If over-commitment is acceptable, the enqueue guard can be dropped, but offline users will see failed transfers on reconnect |
 | 4 | Idempotency keys are retained server-side for at least 24h | Entries queued longer than the window lose deduplication and must escalate to a user decision |
 | 5 | One isolate owns the outbox | A background-isolate enqueue path needs a separate inbox box; Hive CE cannot coordinate across isolates |
-| 6 | Satoshi is licensed and available to the build | Otherwise substitute and document, as the design system itself does |
+| 6 | The platform face is acceptable for a brand-led product | If a licensed brand typeface is required, the ramp is defined by size and weight so it swaps in without retuning the layout |
 
 ---
 

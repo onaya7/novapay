@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+import 'package:novapay/config/theme/app_theme.dart';
 import 'package:novapay/counter/counter.dart';
 import 'package:novapay/l10n/l10n.dart';
 
@@ -8,12 +9,8 @@ class App extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      theme: ThemeData(
-        appBarTheme: AppBarTheme(
-          backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        ),
-        useMaterial3: true,
-      ),
+      theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: const CounterPage(),
