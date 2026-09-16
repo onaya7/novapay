@@ -1,6 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:novapay/config/theme/app_theme.dart';
-import 'package:novapay/counter/counter.dart';
+import 'package:novapay/features/wallet/presentation/view/wallet_page.dart';
 import 'package:novapay/l10n/l10n.dart';
 
 class App extends StatelessWidget {
@@ -13,7 +13,7 @@ class App extends StatelessWidget {
       darkTheme: AppTheme.dark,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      home: const CounterPage(),
+      home: const WalletPage(),
     );
   }
 }

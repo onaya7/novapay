@@ -2,10 +2,29 @@
 
 **Scenario:** FirstBank NovaPay → NovaWallet. Two journeys, sending money and contributing to a NovaSave goal, built for a market where a large share of users are on low-end Android with patchy connectivity.
 
-> **Status: design document.** `lib/` is currently the Very Good CLI scaffold. This README specifies the implementation — architecture, the offline/sync guarantee, and the test matrix that proves it. It is written to be read before the code exists, and to be defended in a room.
+> **Status: partly built, and this document says which parts.** The money layer, the offline queue, the stand-in backend and the design system are implemented and under test. The three screens are in progress. Everything the design specifies beyond what is built is marked **`[DESIGN — not built]`** where it appears, because a document that quietly describes code that does not exist is worth less than no document.
 
 > ## The design in one paragraph
-> Every money-moving action is **written to a local outbox before any network call**, so the online and offline paths are the same code and "offline" is not a branch. Each entry carries a **client-generated idempotency key that is stable across retries**, and the fake backend keeps a **persisted** ledger keyed on it. That combination is what makes replay safe: the queue may send a duplicate, and the server collapses it. The honest claim is at-least-once delivery plus server-side deduplication, which is what "exactly once" means in practice.
+> Every money-moving action is **written to a local queue before any network call**, so the online and offline paths are the same code and "offline" is not a branch. Each action carries a **client-generated idempotency key that is stable across retries**, and the backend keeps a **persisted** ledger keyed on it. That combination is what makes replay safe: the queue may send a duplicate, and the server collapses it. The honest claim is at-least-once delivery plus server-side deduplication, which is what "exactly once" means in practice.
+
+---
+
+## Implementation status
+
+`254 tests, 100% line coverage` `[VERIFIED: fvm flutter test --coverage]`
+
+| Area | Status | Where |
+|---|---|---|
+| Money as integer kobo — parse, format, sum, basis points | **Built** | [`lib/core/money/`](lib/core/money/) |
+| Offline queue — persist-before-send, drain, retry budget, restart recovery | **Built** | [`lib/core/sync/`](lib/core/sync/) |
+| Stand-in backend — models, repositories, services, API envelope, idempotency | **Built** | [`lib/server/`](lib/server/) |
+| Storage — Hive CE and secure storage behind interfaces, flavor-scoped | **Built** | [`lib/core/local_data/`](lib/core/local_data/) |
+| DI, reachability, error translation | **Built** | [`lib/core/injections/`](lib/core/injections/), [`lib/core/network_info/`](lib/core/network_info/), [`lib/utils/`](lib/utils/) |
+| Design system — tokens, theme, shared components | **Built** | [`lib/config/theme/`](lib/config/theme/), [`lib/core/components/`](lib/core/components/) |
+| Wallet home · Send Money · NovaSave goal | **In progress** | — |
+| Leases, persisted backoff with jitter, `unresolved` state, available-vs-confirmed balance, per-attempt trace id | **`[DESIGN — not built]`** | Argued below; deliberately not built yet |
+
+The last row is the honest one. Those are the right answers for a production wallet and the reasoning for each is kept below, because the reasoning is the deliverable. They are not in the code, and this table is the only place that needs checking to know that.
 
 ---
 
@@ -28,6 +47,7 @@ If you read three things: **[Offline and sync](#offline-and-sync)** → **[Money
 | `ListView.builder` for large lists | [Performance](#performance) |
 | No secrets in plain SharedPreferences | [Storage](#storage) |
 | Widget + integration tests | [Testing](#testing) |
+| What is actually built | [Implementation status](#implementation-status) |
 | AI usage | [AI_USAGE.md](AI_USAGE.md) |
 
 ## How to read the claims
@@ -47,29 +67,31 @@ Every factual claim carries its provenance. An untagged number is a defect.
 
 Flutter **3.47.2** stable / Dart **3.13** `[VERIFIED: flutter --version on the development machine]`. The SDK constraints in `pubspec.yaml` are `sdk: ^3.13.0`, `flutter: ^3.47.0`.
 
+The SDK is pinned with FVM (`.fvmrc`), so local commands take an `fvm` prefix. CI provisions its own SDK and runs them bare.
+
 ```sh
 # Development
-flutter run --flavor development --target lib/main_development.dart
+fvm flutter run --flavor development --target lib/main_development.dart
 
 # Staging
-flutter run --flavor staging --target lib/main_staging.dart
+fvm flutter run --flavor staging --target lib/main_staging.dart
 
 # Production
-flutter run --flavor production --target lib/main_production.dart
+fvm flutter run --flavor production --target lib/main_production.dart
 ```
 
 ```sh
-# All tests with coverage
-very_good test --coverage --test-randomize-ordering-seed random
-
-# Bloc lint (not run by `flutter analyze` — the bloc rules live under a key the analyzer ignores)
-dart run bloc_tools:bloc lint .
+fvm flutter test --coverage        # 254 tests, 100% line coverage
+fvm flutter analyze lib test       # exits non-zero on info, so treat any issue as a failure
+fvm dart format lib test
+fvm dart run bloc_tools:bloc lint . # the bloc rules live under a key `flutter analyze` ignores
+fvm dart run build_runner build    # freezed, json_serializable, injectable
 ```
 
-Two scaffold conventions that will trip a reader who skims:
+Two conventions that will trip a reader who skims:
 
 - Widgets import **`package:material_ui/material_ui.dart`**, not `package:flutter/material.dart`. Material was decoupled from the framework into its own package as of this Flutter version.
-- The scaffold uses the Dart 3.13 **`const new({super.key})`** constructor shorthand.
+- The Dart 3.13 **`const new({super.key})`** shorthand is used for unnamed constructors. It does **not** work for named ones — `const .named(...)` fails to compile — which is why `unnecessary_type_name_in_constructor` is disabled in `analysis_options.yaml`.
 
 **CI note, worth knowing before you push.** `.github/workflows/main.yaml` delegates to `very_good_workflows/flutter_package.yml@v1`, whose **`min_coverage` input defaults to `100`** `[VERIFIED: upstream workflow definition]`. A 100% line-coverage gate is a real force on this codebase, and it pushes toward exactly the tests that prove nothing. See [tests that lie](#tests-that-lie).
 
@@ -110,20 +132,33 @@ Feature-first, with clean-architecture layers inside each feature. The boundary 
 
 ```
 lib/
+├── config/
+│   ├── flavor/          flavor-scoped config, chosen by the entry point
+│   └── theme/           AppThemeColors (ThemeExtension), TTextTheme, AppTheme
 ├── core/
-│   ├── money/          Money value type, parser, formatter, basis points
-│   ├── outbox/         entry, repository, drainer, drain policy, backoff
-│   ├── connectivity/   reachability, not just interface-up
-│   ├── error/          Failure sealed union
-│   ├── exception/      AppException sealed union
-│   ├── storage/        Hive box access + secure storage wrapper
-│   ├── theme/          design tokens as a ThemeExtension
-│   └── components/     shared widgets, semantics baked in
-└── features/
-    ├── wallet_home/    data · domain · presentation
-    ├── send_money/     data · domain · presentation
-    └── savings_goal/   data · domain · presentation
+│   ├── components/      shared widgets, semantics baked in
+│   ├── constants/       AppColor, AppSize, storage keys
+│   ├── error/           Failure sealed union
+│   ├── exception/       AppException sealed union
+│   ├── extensions/      String, int and DateTime helpers
+│   ├── injections/      get_it + injectable container
+│   ├── local_data/      Hive CE and secure storage, both behind interfaces
+│   ├── money/           Money value type, parser, formatter, basis points
+│   ├── network_info/    reachability, not just interface-up
+│   └── sync/            PendingAction + SyncService — the offline queue
+├── server/              the stand-in backend, layered
+│   ├── models/          Transaction, SavingsGoal, ApiResponse
+│   ├── repositories/    account, transaction, savings goal, idempotency
+│   ├── services/        transfer, savings — the business rules
+│   └── novapay_api.dart the surface the app calls
+└── utils/               EitherSafeRunner, InternetSafeRunner, logger
 ```
+
+`lib/features/` does not exist yet; the three screens land there as `wallet/`, `send_money/` and `savings/`, each with `data · domain · presentation`.
+
+**Why `lib/server/` is a directory and not a mock.** The brief supplies no backend, so this app ships one. It is layered the way a Node or Spring service would be — repositories own persistence, services own the rules and throw, an API surface maps a refusal onto a status code — and every layer sits behind an abstraction. That is not ceremony for its own sake: it is what makes the swap to a real HTTP client a change to one DI binding rather than a rewrite, and it keeps the fake honest, because a fake with the rules smeared into the transport layer will accept things a real server would refuse.
+
+Every endpoint answers with the same `ApiResponse<T>` envelope — `{status, code, message, data}`. **A business refusal is a response carrying a code, the way a real API answers 402 or 422; only a transport failure throws.** The queue branches on `response.isSuccess`, and its `catch` is reserved for the case where the request never landed.
 
 ### Errors
 
@@ -146,12 +181,14 @@ Two stores, split by sensitivity, both behind interfaces:
 
 | Store | Holds | Why |
 |---|---|---|
-| **Hive CE** | The outbox, cached balance snapshot, non-sensitive flags | Synchronous reads at startup with no `await` |
-| **flutter_secure_storage** | Auth tokens, session id | Keychain / `encryptedSharedPreferences`. Never `SharedPreferences` `[SOURCE: brief §2.2]` |
+| **Hive CE** | The action queue, the server's own tables, non-sensitive flags | Synchronous reads at startup with no `await` |
+| **flutter_secure_storage** | Auth tokens, session id | Keychain / Keystore. Never `SharedPreferences` `[SOURCE: brief §2.2]` |
 
-Storage keys live in one file, each commented with which store owns it, so nobody puts a token in the wrong one.
+Storage keys live in one file, each commented with which store owns it, so nobody puts a token in the wrong one. Box names are flavor-scoped, so a development build cannot read a production build's data.
 
-Outbox entries are stored as **JSON strings rather than typed Hive adapters**. A queued transfer may outlive an app update, and a moving schema must not brick the queue. This choice has a cost, paid in [the money section](#money-kobo-end-to-end).
+`flutter_secure_storage` v11 removed the `encryptedSharedPreferences` flag because AES-GCM with RSA-OAEP key wrapping is now the Android default; there is nothing to opt into.
+
+Queued actions are stored as **JSON strings rather than typed Hive adapters**. A queued transfer may outlive an app update, and a moving schema must not brick the queue. This choice has a cost, paid in [the money section](#money-kobo-end-to-end).
 
 ---
 
@@ -237,25 +274,24 @@ This is the part the brief is actually grading, so it gets the most space.
 
 ### The shape
 
-An **outbox**: every money-moving action becomes a durable entry written to Hive **before any network call is attempted**. The UI renders from the outbox, so a queued transfer appears as Pending immediately, whether the device is online or not.
+A **local queue**: every money-moving action becomes a durable row written to Hive **before any network call is attempted**. The UI renders from the queue, so a queued transfer appears as Pending immediately, whether the device is online or not.
 
 **There is no separate offline code path.** Offline is simply a drain that has not succeeded yet. This is the single most important structural decision here: a codebase with an `if (offline)` branch has two behaviors to test and two places for the money to go missing.
 
-An entry carries:
+A `PendingAction` carries `[SOURCE: lib/core/sync/pending_action.dart]`:
 
 | Field | Purpose |
 |---|---|
-| `idempotencyKey` | Client-generated UUID, **stable for the life of the operation**. The dedup key |
-| `attemptId` | Fresh UUID **per attempt**. Tracing only, never used for dedup |
+| `id` | Client-generated UUID, **stable for the life of the operation**. Sent as the idempotency key |
 | `type` | `send` or `contribute` |
 | `amountKobo` | `int` |
-| `payloadJson`, `schemaVersion` | The request, and the version that wrote it |
-| `status` | See [the state machine](#the-state-machine) |
-| `attemptCount`, `sawAmbiguousAttempt` | Retry budget, and a one-way "we may have been processed" flag |
-| `nextAttemptAt` | Persisted backoff deadline |
-| `leaseOwner`, `leaseExpiresAt` | Durable single-flight lease |
-| `userId` | Shared devices are normal in this market |
+| `payload` | The request body |
+| `schemaVersion` | The version that wrote the row, checked before it is decoded |
+| `status` | `queued` · `sending` · `done` · `failed` |
+| `attemptCount` | Retry budget, capped at 5 |
 | `createdAt` | FIFO ordering |
+
+**`[DESIGN — not built]`** The full design adds `attemptId` (per-attempt trace id), `sawAmbiguousAttempt`, `nextAttemptAt` (persisted backoff), `leaseOwner`/`leaseExpiresAt` (durable single-flight lease) and `userId`. Each is argued below. None is in the code.
 
 ### The idempotency key argument
 
@@ -263,14 +299,41 @@ The brief says the app "generates an idempotency key **per attempt** so a retrie
 
 A key that changes per attempt provides **zero** deduplication. If attempt 2 carries a different key from attempt 1, the server sees two unrelated requests and processes both. The literal reading does not merely fail to prevent double-processing, it guarantees it under retry — which is precisely what the sentence's own subordinate clause says the key is for.
 
-The resolution is that the brief is conflating two different fields, and this app ships **both**:
+The resolution is that the brief is conflating two different fields:
 
-- **`idempotencyKey`** — one per logical operation, stable across every retry. Sent as `Idempotency-Key`. This is what makes replay safe.
-- **`attemptId`** — a fresh UUID per attempt, sent as `X-Attempt-Id`. Never used for deduplication. It exists for tracing and for the support question "which attempt actually landed?"
+- **`idempotencyKey`** — one per logical operation, stable across every retry. This is what makes replay safe, and it is `PendingAction.id` in the code.
+- **`attemptId`** — a fresh UUID per attempt, for tracing and for the support question "which attempt actually landed?" Never used for deduplication. **`[DESIGN — not built]`**
 
-That satisfies the brief's literal wording and its stated intent, and it costs one field. `[JUDGMENT]`
+Shipping both satisfies the brief's literal wording and its stated intent, and it costs one field. The stable key is built because it is load-bearing; the trace id is not, because nothing yet consumes a trace. `[JUDGMENT]`
 
-### The state machine
+### The state machine as built
+
+```
+   enqueue (always, before any network call)
+            │
+            ▼
+       ┌────────┐   drain, with a network   ┌─────────┐   2xx or a refusal   ┌──────┐
+       │ queued │ ─────────────────────────▶│ sending │ ───────────────────▶ │ done │
+       └────────┘                           └────┬────┘                      └──────┘
+            ▲                                    │
+            │  attemptCount < 5                  │ transport failure, or found
+            └────────────────────────────────────┤ at cold start (recoverInterrupted)
+                                                 │
+                                                 ▼  attemptCount == 5
+                                            ┌────────┐
+                                            │ failed │
+                                            └────────┘
+```
+
+A row found `sending` at cold start is requeued, which is safe **because the id is the idempotency key** — the resend is collapsed by the server rather than moving money twice. `done` and `failed` are terminal.
+
+### Where that state machine is not enough
+
+**`[DESIGN — not built]`, and this is the gap a reviewer should press on.**
+
+Four states cannot express *"we don't know."* The design below splits the terminal states by knowledge instead of by attempt count, and the rest of this section argues why that matters for money.
+
+### The fuller state machine
 
 ```
                     enqueue (always, before any network call)
@@ -313,7 +376,7 @@ Terminal states are `confirmed`, `rejected`, and `unresolved`. Only `rejected` m
 
 ### Terminal states split by knowledge
 
-**This is the correction that matters most, and an earlier draft of this design got it wrong.**
+**This is the correction that matters most, and an earlier draft of this design got it wrong.** **`[DESIGN — not built]`** — the code currently has a single `failed`, which is exactly the shape this section argues against.
 
 The intuitive design has one `failed` state reached after N attempts, with a Retry button. That is a live double-spend. Consider: attempts 1 and 2 fail to connect, genuinely not processed. Attempt 3 reaches the server, the server debits, and the response times out on a flaky cell. Attempts 4 and 5 fail to connect. The entry lands in `failed`, the user taps Retry, and the money moves twice.
 
@@ -330,7 +393,7 @@ A one-way `sawAmbiguousAttempt` flag drives it: any attempt that was transmitted
 
 ### Restart is the hard case
 
-An entry found `inFlight` at cold start is ambiguous: the process died somewhere between writing the request and reading the response.
+A row found `sending` at cold start is ambiguous: the process died somewhere between writing the request and reading the response.
 
 **Single-flight cannot be an in-memory boolean.** The naive guard races against itself:
 
@@ -346,31 +409,36 @@ Any `await` between the check and the set opens a deterministic window. Connecti
 
 Three layers replace it:
 
-1. **Re-entrancy within the isolate** — a future-chain mutex, `_lock = _lock.then((_) => _drainOnce())`. Survives refactors in a way a bool does not.
-2. **Across restart** — the durable lock is the `inFlight` record itself, held as a **lease** (`leaseOwner`, `leaseExpiresAt`), not a flag. At cold start an `inFlight` entry is reclaimable only if the lease belongs to a dead process or has expired. Without the lease you cannot distinguish "crashed mid-send" from "currently being sent."
-3. **Across isolates** — don't. Hive CE has no cross-isolate coordination, and two isolates with the same box open corrupt it rather than merely duplicating. **Exactly one isolate owns the outbox**, stated here as an architectural constraint. A background isolate that needs to enqueue writes to a separate inbox box the owner drains.
+1. **Re-entrancy within the isolate** — a future-chain mutex, `_lock = _lock.then((_) => _drainOnce())` `[SOURCE: lib/core/sync/sync_service.dart]`. **Built.** A bool guard was written first and was wrong in a way worth recording: a drain requested *during* a drain became a silent no-op, which loses exactly the wake-up that connectivity-regained delivers. The mutex chains instead of dropping.
+2. **Across restart** — `recoverInterrupted()` requeues anything left `sending`, and is called at startup. **Built.** The durable lock should be a **lease** (`leaseOwner`, `leaseExpiresAt`) rather than a bare status, because a bare status cannot distinguish "crashed mid-send" from "currently being sent" — that distinction only matters with more than one drain trigger in flight, so it is deferred. **`[DESIGN — not built]`**
+3. **Across isolates** — don't. Hive CE has no cross-isolate coordination, and two isolates with the same box open corrupt it rather than merely duplicating. **Exactly one isolate owns the queue**, stated here as an architectural constraint. A background isolate that needs to enqueue writes to a separate inbox box the owner drains.
 
-A reclaimed entry moves to `awaitingReconcile` and is resent **with the same idempotency key**, which is safe precisely because the server deduplicates.
+A recovered row is resent **with the same idempotency key**, which is safe precisely because the server deduplicates.
 
-### The fake backend has its own disk
+### The backend has its own disk
 
-No backend is provided, so this app fakes one `[SOURCE: brief §2]`. The fake API keeps a map of `idempotencyKey → response` and a ledger of applied transactions, and returns the stored response on replay instead of processing again.
+No backend is provided, so this app ships one `[SOURCE: brief §2]`. `IdempotencyRepository` records every key the server has applied, and a replay returns the original entity instead of processing again.
 
-**That map is persisted to its own Hive boxes, not held in memory.** An earlier draft held it in process memory, which fails at exactly the event the requirement is about: after an app restart the in-process server has total amnesia, the resent key hits an empty map, and the transfer is processed a second time. The demo would either never restart and prove nothing, or restart and double-send.
+**That record is persisted to the database, not held in memory.** An earlier draft held it in process memory, which fails at exactly the event the requirement is about: after an app restart the in-process server has total amnesia, the resent key hits an empty map, and the transfer is processed a second time. The demo would either never restart and prove nothing, or restart and double-send. There is a test for precisely this — *"a restart still recognizes a key it already applied"*.
 
-The boxes are named and documented as **the server's disk, not the client's**, so nobody later "tidies up" by merging them into the app's storage.
+The server's keys are namespaced as **the server's tables, not the client's**, so nobody later "tidies up" by merging them into the app's storage.
 
 ### Retry pacing
 
-- **Backoff is per-entry and persisted** as `nextAttemptAt`. The drainer skips entries still inside their window. Persisted, because an in-memory backoff resets on restart and produces a thundering herd on the first cold start after a crash loop.
+**Built:** a fixed retry budget of 5 attempts per action, and reachability checked against the network rather than merely "is there an interface up" — captive portals return 200 to their own login page.
+
+**`[DESIGN — not built]`**, and the reasoning is why:
+
+- **Backoff should be per-entry and persisted** as `nextAttemptAt`, with the drain skipping entries still inside their window. Persisted, because an in-memory backoff resets on restart and produces a thundering herd on the first cold start after a crash loop.
 - **Exponential with jitter**, capped around 30 minutes. Jitter matters because every client on a cell tower reconnects at the same moment.
-- **Failures are classified.** A 4xx validation error is terminal at attempt 1 — retrying "invalid account number" five times is waste. A 401 refreshes the token and does **not** burn an attempt. 5xx and timeouts are retryable.
-- **No terminal cap on transport errors.** If a user is offline for a week, the transfer should still go. What changes after N failures is the *UI*, which gains "Having trouble — Retry / Cancel", not the queue, which keeps trying. Silently terminal-failing money is the one thing this app must never do. `[JUDGMENT]`
-- Reachability is checked against the API, not merely "is there an interface up." Captive portals return 200 to their own login page.
+- **Failures should be classified.** A 4xx validation error is terminal at attempt 1 — retrying "invalid account number" five times is waste. A 401 refreshes the token and does **not** burn an attempt. 5xx and timeouts are retryable. The `ApiResponse` envelope already carries the status code needed to do this; nothing consumes it yet.
+- **No terminal cap on transport errors.** If a user is offline for a week, the transfer should still go. What changes after N failures is the *UI*, which gains "Having trouble — Retry / Cancel", not the queue, which keeps trying. The current fixed cap of 5 is the expedient choice, and it is the wrong one for money — named here rather than left to be discovered. `[JUDGMENT]`
 
 ### Ordering without wedging
 
-The queue drains **the oldest *runnable* entry**, not simply the oldest entry.
+**`[DESIGN — not built]`** — the queue currently drains every pending action oldest-first, which is correct only because no state yet blocks on a user decision.
+
+The queue should drain **the oldest *runnable* entry**, not simply the oldest entry.
 
 Strict FIFO plus sequential single-flight plus a head entry awaiting a user decision equals a permanently stuck queue: a send sitting in `unresolved` would leave a NovaSave contribution behind it showing "Pending" forever, with no explanation and no action available.
 
@@ -379,6 +447,8 @@ FIFO *ordering* is still correct, because both action types debit the same walle
 Per-type lanes are the obvious alternative and are rejected: they break funds ordering for no benefit. The drain is never parallelized — concurrency buys nothing here and multiplies the race surface.
 
 ### Two balances
+
+**`[DESIGN — not built]`** — `SyncService.pendingKobo()` exists and returns the total still owed, so the derived number is one subtraction away. The enqueue guard is not written, and lands with the Send Money screen.
 
 | Number | Owner | Rule |
 |---|---|---|
@@ -409,8 +479,8 @@ One question this design would ask a real backend team: **what is the idempotenc
 
 ### Poison entries and shared devices
 
-- **`schemaVersion` on every entry, and a drain loop no single entry can kill.** A transfer queued on v1, then an app update to v2 that adds a required field, throws on decode. If that throw escapes the drain loop, the drainer dies on every start and *every* queued transfer is stranded with the user's money in limbo. An undecodable entry is moved aside and surfaced; the loop continues.
-- **`userId` on every entry.** Shared phones are normal in this market. The drainer refuses entries belonging to a different session, logout with a non-empty outbox warns rather than clears, and a cold-start drain that fires before the session is restored must not burn an attempt on the resulting 401.
+- **`schemaVersion` on every row, and a drain loop no single row can kill. Built.** A transfer queued on v1, then an app update to v2 that adds a required field, throws on decode. If that throw escapes the drain loop, the drain dies on every start and *every* queued transfer is stranded with the user's money in limbo. `PendingAction.fromStoredJson` checks the version first and raises one `FormatException` whatever the generated decoder threw, and the reader skips that row and keeps going. Tested as *"a row this build cannot read is skipped, not fatal"*.
+- **`userId` on every row. `[DESIGN — not built]`** Shared phones are normal in this market. The drain should refuse rows belonging to a different session, logout with a non-empty queue should warn rather than clear, and a cold-start drain that fires before the session is restored must not burn an attempt on the resulting 401. There is no auth in this build, so there is no session to scope to — it is listed because shipping without it would be the bug, not because it was overlooked.
 
 ---
 
@@ -510,39 +580,43 @@ The target device is a low-end Android phone, not the simulator on a fast laptop
 - Skeletons sized to the final layout, which also prevents the layout shift that a spinner-then-content swap causes.
 - Images and icons as vectors, sized from the token ramp.
 - Profile with DevTools rather than guessing. The per-frame budget is ~16ms for 60fps.
-- The outbox is read through a query rather than by loading and decoding every entry on every rebuild.
+- **The queue is decoded once per change, not once per rebuild.** `SyncService.changes` publishes the whole queue on every mutation and the UI listens to that, rather than re-reading and re-decoding the stored JSON inside `build`. Worth naming because the storage-backed read is cheap enough to be tempting and quadratic enough to hurt on a long list.
 
 ---
 
 ## Testing
 
+`254 tests, 100% line coverage` `[VERIFIED]`. The 100% figure is a CI gate, not an achievement — see [tests that lie](#tests-that-lie).
+
 ### The matrix
 
-| Level | Covers |
-|---|---|
-| **Unit** | `Money` parse, format, sum, basis points. Drain policy as pure, table-driven logic |
-| **Widget** | Send Money recipient → amount → confirm. NovaSave contribute. Pending chip while offline |
-| **Integration** | offline → enqueue → kill app → relaunch → reconnect → **exactly one send** |
+| Level | Covers | Status |
+|---|---|---|
+| **Unit** | `Money` parse, format, sum, basis points. `PendingAction` transitions. Server services and repositories | Built |
+| **Component** | Buttons, chips, scaffold, money text, empty and error states — including their semantics | Built |
+| **Behavioral** | Queue against a real `LocalDataStorage` and a real server: offline, reconnect, retry, restart, replay | Built |
+| **Widget** | Send Money recipient → amount → confirm. NovaSave contribute. Pending chip while offline | With the screens |
+| **Integration** | offline → enqueue → kill app → relaunch → reconnect → **exactly one send**, on a device | With the screens |
 
-### The four tests that actually catch a regression
+### The tests that actually catch a regression
 
-1. **True cold-restart replay.** Enqueue, let the drainer mark `inFlight`, have the fake API record the call and then hang. Then **destroy the in-memory world** — close the box, reset the DI container, re-initialize from the same on-disk path — and cold-start the drain. Assert the **server ledger holds exactly one entry**. The load-bearing part is rebuilding from disk; a test that keeps the object graph alive proves nothing.
-2. **Concurrent trigger race.** Fire connectivity-regained and app-resume in the same microtask, with the fake API gated on a `Completer` the test controls. Assert one call. This is what catches the check-then-set-across-an-await bug, and it **must** use a manual `Completer` — `Future.delayed` makes it pass by accident.
-3. **Key stability across attempts.** Fail attempts 1 and 2 with transport errors, succeed on 3. Assert all three carried the **same `idempotencyKey`** and **three distinct `attemptId`s**. This test *is* the idempotency argument, encoded, and it is what stops a future reader from "fixing" the code to match the brief's literal wording.
-4. **Money round-trip property test.** `parse(format(k)) == k` across `0, 1, 29, 99, 100, 101` and large values, plus the inputs users actually produce: `".5"`, `"1."`, `"1.005"`, `"₦1,000.00"`, and a twenty-digit paste. Plus exact-equality summation over a list.
+1. **Cold-restart replay. Built** — *"a queued action survives and then sends exactly once"* and *"a restart still recognizes a key it already applied"*. A fresh `SyncService` and a fresh server are built over the **same storage**, the way the app would come up after a kill. The load-bearing part is rebuilding from disk; a test that keeps the object graph alive proves nothing.
+2. **Idempotency under replay. Built** — *"the same key applied three times moves money once"*, and *"a replay answers with the original transaction"*. The second matters more than it looks: a replay that returns a *fresh* success is indistinguishable from a double-spend at the call site.
+3. **Interrupted send is retried, not lost. Built** — *"a send interrupted mid-flight is retried, not lost"*, plus *"recoverInterrupted requeues a stranded send"*.
+4. **Money round-trip. Built** — `parse(format(k)) == k` across `0, 1, 29, 99, 100, 101` and large values, plus the inputs users actually produce: `".5"`, `"1."`, `"1.005"`, `"₦1,000.00"`, and a twenty-digit paste. Plus exact-equality summation over a list.
+5. **Concurrent trigger race. `[DESIGN — not built]`** — fire connectivity-regained and app-resume in the same microtask, with the API gated on a `Completer` the test controls. This is what would catch the check-then-set-across-an-await bug. The future-chain mutex that fixes that bug **is** in the code; the test pinning it is not, and it **must** use a manual `Completer` — `Future.delayed` makes it pass by accident.
+6. **The balance rule. `[DESIGN — not built]`** — with a ₦20,000 balance, queue three transfers of ₦10,000 offline and assert the **third is refused at enqueue**, not accepted and later bounced. Lands with the Send Money screen.
 
-Plus one that encodes the balance rule: with a ₦20,000 balance, queue three transfers of ₦10,000 offline and assert the **third is refused at enqueue**, not accepted and later bounced.
-
-A `Clock` is injected throughout. Backoff tested against real `Future.delayed` is slow and flaky, and a flaky suite gets deleted.
+A `Clock` is not yet injected. Once backoff exists it must be, because backoff tested against real `Future.delayed` is slow and flaky, and a flaky suite gets deleted. **`[DESIGN — not built]`**
 
 ### Tests that lie
 
 Named explicitly, because the 100% coverage gate pushes toward every one of them:
 
-- **`bloc_test` over the Cubit with a mocked outbox repository.** It asserts a state list, which is a restatement of the code that produced it. Hive never runs. It cannot catch a single defect described in this document — and it is roughly what most submissions offer as "offline queue tests."
+- **`bloc_test` over the Cubit with a mocked queue.** It asserts a state list, which is a restatement of the code that produced it. Storage never runs. It cannot catch a single defect described in this document — and it is roughly what most submissions offer as "offline queue tests." The queue tests here run against a real `LocalDataStorage` and a real server for exactly this reason.
 - **"Enqueue offline, flip online, assert one API call" on an instance that never left memory.** Passes with no persistence at all, and passes with no idempotency key at all. It proves nothing about restart survival or deduplication.
 - **`verify(...).called(1)` for the restart case.** The sharpest trap: it tests the *guard* rather than *idempotency*. The correct assertion is **`callCount == 2` and `ledger.length == 1`** — the duplicate **was** sent, and the server collapsed it. A restart test that expects one call has not demonstrated deduplication.
-- **Coverage percentage.** 100% line coverage of the drainer is reachable without exercising one interleaving.
+- **Coverage percentage.** This repo is at 100% and that is a CI gate, not evidence. 100% line coverage of the drain is reachable without exercising a single interleaving.
 
 ---
 
@@ -553,10 +627,10 @@ Every judgment the brief's ambiguities forced.
 | # | Assumption | What changes if it is wrong |
 |---|---|---|
 | 1 | "Idempotency key per attempt" means a stable dedup key plus a per-attempt trace id | If the grader wants it literally per-attempt, the design double-spends. Argued in full [above](#the-idempotency-key-argument) |
-| 2 | The fake backend may deduplicate on the idempotency key | Without it, exactly-once is unachievable and the design degrades to at-most-once plus reconciliation |
+| 2 | The backend may deduplicate on the idempotency key | Without it, exactly-once is unachievable and the design degrades to at-most-once plus reconciliation |
 | 3 | Pending spend reduces available balance and is enforced at enqueue | If over-commitment is acceptable, the enqueue guard can be dropped, but offline users will see failed transfers on reconnect |
 | 4 | Idempotency keys are retained server-side for at least 24h | Entries queued longer than the window lose deduplication and must escalate to a user decision |
-| 5 | One isolate owns the outbox | A background-isolate enqueue path needs a separate inbox box; Hive CE cannot coordinate across isolates |
+| 5 | One isolate owns the queue | A background-isolate enqueue path needs a separate inbox box; Hive CE cannot coordinate across isolates |
 | 6 | The platform face is acceptable for a brand-led product | If a licensed brand typeface is required, the ramp is defined by size and weight so it swaps in without retuning the layout |
 
 ---

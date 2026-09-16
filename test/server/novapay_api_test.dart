@@ -114,7 +114,7 @@ void main() {
       expect(replay.requireData.occurredAt, first.requireData.occurredAt);
     });
 
-    test('a restart still recognises a key it already applied', () async {
+    test('a restart still recognizes a key it already applied', () async {
       await send();
 
       // A fresh server over the same storage is what a relaunch looks like.

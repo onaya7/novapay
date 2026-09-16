@@ -41,8 +41,8 @@ Ten styles on the standard `TextTheme` (`lib/config/theme/custom_theme/text_them
 `context.texts`. `bodyMedium` (14/22) is the default. **Nothing renders below 10px, and nothing
 essential below 12px** — `labelSmall` is for non-essential metadata only.
 
-No `fontFamily` is set: the design font is not licensed for this repo, so the platform face is used
-and the substitution is stated rather than hidden.
+No `fontFamily` is set. The platform face costs no download on a low-end device, and the ramp is
+defined by size and weight so a brand typeface can be added later without retuning the layout.
 
 **The app respects the system font scale and never clamps it.** That makes every height in
 `AppSize` a *minimum*: use `ConstrainedBox(minHeight:)`, never `SizedBox(height:)`, on anything
@@ -89,9 +89,9 @@ All in `lib/core/components/`.
 - **Never render an amount with a bare `Text`.** `MoneyText` announces it as words, because a screen
   reader reads raw currency text as "naira two comma four eight zero".
 - Every icon-only control gets a 44pt frame and a label or tooltip.
-- Inputs carry a **visible label and** a semantic one; placeholder-only labelling is a defect.
+- Inputs carry a **visible label and** a semantic one; placeholder-only labeling is a defect.
 - A state change — queued becoming sent, a validation error appearing — is announced, not left as a
-  silent colour change.
+  silent color change.
 
 ## Lists
 `ListView.builder` for anything unbounded, with a `ValueKey` per row so state survives reordering.

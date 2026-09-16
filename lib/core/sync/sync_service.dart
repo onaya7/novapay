@@ -57,7 +57,7 @@ class SyncServiceImpl implements SyncService {
 
   final _changes = StreamController<List<PendingAction>>.broadcast();
 
-  /// Serialises drains. A bool guard would make a drain requested mid-drain a
+  /// Serializes drains. A bool guard would make a drain requested mid-drain a
   /// silent no-op, which loses the wake-up when connectivity returns.
   Future<void> _lock = Future<void>.value();
 

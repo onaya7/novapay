@@ -10,6 +10,12 @@ import 'package:novapay/core/injections/injection.dart';
 import 'package:novapay/core/local_data/local_data_storage.dart';
 import 'package:novapay/core/local_data/secure_local_data_storage.dart';
 import 'package:novapay/core/network_info/network_info.dart';
+import 'package:novapay/core/sync/sync_service.dart';
+import 'package:novapay/features/wallet/data/repositories/wallet_repository_impl.dart';
+import 'package:novapay/features/wallet/domain/repositories/wallet_repository.dart';
+import 'package:novapay/features/wallet/presentation/cubit/wallet_cubit.dart';
+import 'package:novapay/server/novapay_api.dart';
+import 'package:novapay/utils/either_safe_runner.dart';
 
 const _boxName = 'novapay_test_box';
 
@@ -36,6 +42,14 @@ void main() {
   test('resolves connectivity', () {
     expect(sl<InternetConnection>(), isA<InternetConnection>());
     expect(sl<NetworkInfo>(), isA<NetworkInfoImpl>());
+  });
+
+  test('resolves the wallet graph down to its error translator', () {
+    expect(sl<EitherSafeRunner>(), isA<EitherSafeRunner>());
+    expect(sl<NovaPayApi>(), isA<NovaPayApiImpl>());
+    expect(sl<SyncService>(), isA<SyncServiceImpl>());
+    expect(sl<WalletRepository>(), isA<WalletRepositoryImpl>());
+    expect(sl<WalletCubit>(), isA<WalletCubit>());
   });
 
   test('resolves both storages', () {

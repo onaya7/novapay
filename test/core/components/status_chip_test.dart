@@ -14,7 +14,7 @@ Color _dotColor(WidgetTester tester) {
 
 void main() {
   group('StatusChip', () {
-    testWidgets('carries the state in the word, not only the colour', (
+    testWidgets('carries the state in the word, not only the color', (
       tester,
     ) async {
       await tester.pumpApp(

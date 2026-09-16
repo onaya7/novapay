@@ -37,9 +37,9 @@ void main() {
       const original = AppThemeColors.light;
       const other = Color(0xFF000001);
 
-      final recoloured = original.copyWith(background: other);
-      expect(recoloured.background, other);
-      expect(recoloured.primary, original.primary);
+      final recolored = original.copyWith(background: other);
+      expect(recolored.background, other);
+      expect(recolored.primary, original.primary);
 
       final rebranded = original.copyWith(primary: other);
       expect(rebranded.primary, other);

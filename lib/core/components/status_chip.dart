@@ -5,7 +5,7 @@ import 'package:novapay/core/constants/app_size.dart';
 
 enum ChipTone { pending, success, danger }
 
-/// Neutral pill with a coloured dot; amber text on an amber fill is 1.27:1.
+/// Neutral pill with a colored dot; amber text on an amber fill is 1.27:1.
 class StatusChip extends StatelessWidget {
   const new({required this.label, required this.tone, super.key});
 

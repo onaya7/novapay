@@ -6,7 +6,7 @@ import 'package:novapay/core/money/money.dart';
 
 void main() {
   group('StringX', () {
-    test('recognises a ten-digit account number', () {
+    test('recognizes a ten-digit account number', () {
       expect('0123456789'.isAccountNumber, isTrue);
       expect('012345678'.isAccountNumber, isFalse);
       expect('01234567890'.isAccountNumber, isFalse);

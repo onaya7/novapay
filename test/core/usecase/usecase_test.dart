@@ -15,8 +15,12 @@ class _Ticker extends StreamUseCase<int, NoParams> {
 
 void main() {
   test('NoParams instances are interchangeable', () {
-    expect(const NoParams(), const NoParams());
-    expect(const NoParams().props, isEmpty);
+    // A const instance is canonicalized, so the constructor never runs.
+    // ignore: prefer_const_constructors
+    final built = NoParams();
+
+    expect(built, const NoParams());
+    expect(built.props, isEmpty);
   });
 
   test('a usecase returns Either', () async {

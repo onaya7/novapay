@@ -3,7 +3,7 @@ import 'package:novapay/config/theme/app_theme_colors.dart';
 import 'package:novapay/core/components/custom_button.dart';
 import 'package:novapay/core/constants/app_size.dart';
 
-/// Centred indeterminate spinner, for waits a skeleton cannot describe.
+/// Centered indeterminate spinner, for waits a skeleton cannot describe.
 class LoadingIndicator extends StatelessWidget {
   const new({this.size = AppSize.iconMd, super.key});
 
@@ -58,7 +58,7 @@ class AppErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _CentredMessage(
+    return _CenteredMessage(
       icon: Icons.cloud_off,
       message: message,
       action: onRetry == null
@@ -88,7 +88,7 @@ class AppEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) =>
-      _CentredMessage(icon: icon, message: message, action: action);
+      _CenteredMessage(icon: icon, message: message, action: action);
 }
 
 /// Fills the viewport so pull-to-refresh works over an empty list too.
@@ -116,8 +116,8 @@ class PullToRefreshBody extends StatelessWidget {
   }
 }
 
-class _CentredMessage extends StatelessWidget {
-  const _CentredMessage({
+class _CenteredMessage extends StatelessWidget {
+  const _CenteredMessage({
     required this.icon,
     required this.message,
     this.action,
