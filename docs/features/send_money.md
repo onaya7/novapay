@@ -27,12 +27,15 @@ rule lives in a widget.
 1. `domain/entities/bank.dart` / `domain/repositories/bank_repository.dart` /
    `data/repositories/bank_repository_impl.dart` — the curated bank list and its real NIP codes.
 2. `domain/entities/transfer_draft.dart` — the steps, the validation (now including a chosen bank),
-   and `hasEnough`.
+   `hasEnough`, and `requiresBiometricConfirmation`.
 3. `data/repositories/transfer_repository_impl.dart` — the funds guard and the enqueue.
 4. `presentation/cubit/send_money_cubit.dart` — step navigation, bank selection and submit.
-5. `presentation/widgets/send_money_widgets.dart` — the three steps and the receipt.
+5. `presentation/widgets/send_money_widgets.dart` — the three steps and the receipt, every string
+   routed through `context.l10n` (`lib/l10n/arb/`; English, Spanish and Hausa).
 6. `presentation/widgets/bank_picker_sheet.dart` / `bank_avatar.dart` — the searchable picker and
    the logo-or-initials avatar it shares with the recipient step.
+7. `presentation/view/biometric_confirm_page.dart` — the biometric-confirmation stub, pushed as
+   `RoutesName.biometricConfirm` when `requiresBiometricConfirmation` is true.
 
 ## Gotchas
 - **The amount step advances even when there is not enough.** `canAdvance` is deliberately true
@@ -66,3 +69,15 @@ rule lives in a widget.
   with no `kPendingActionSchemaVersion` bump. `WalletRepositoryImpl` and the server's
   `TransferServiceImpl` both fall back to the pre-bank title format for older rows that never
   carried one.
+- **`requiresBiometricConfirmation` is UI and navigation only.** Above
+  `kBiometricConfirmThresholdKobo` (₦50,000), the confirm CTA pushes `BiometricConfirmPage` instead
+  of calling `cubit.submit()` directly; the page simulates the prompt with a timed delay, then calls
+  the same `submit()` and pops. No `local_auth` check backs it — there is nothing here a jailbroken
+  device or a skipped animation frame couldn't bypass.
+- **`BiometricConfirmPage` is handed the live `SendMoneyCubit`, not a copy.** The route reads it
+  back from `state.extra` and wraps it in `BlocProvider.value`, so the page acts on the same draft
+  the confirm step was already holding — there is no second cubit to keep in sync.
+- **A queued send fires exactly one local notification when it settles**, from
+  `lib/core/notifications/transfer_sync_notifier.dart`, which diffs `SyncService.changes` rather
+  than living inside `SyncServiceImpl` — the queue itself stays Flutter-plugin-free. Contributions
+  and top-ups are deliberately silent; only `PendingActionType.send` triggers it.

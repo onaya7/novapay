@@ -1,3 +1,4 @@
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:novapay/app/routes/routes_name.dart';
 import 'package:novapay/app/routes/routes_path.dart';
@@ -8,6 +9,8 @@ import 'package:novapay/features/savings/domain/entities/savings_goal_item.dart'
 import 'package:novapay/features/savings/presentation/view/contribute_page.dart';
 import 'package:novapay/features/savings/presentation/view/create_goal_page.dart';
 import 'package:novapay/features/savings/presentation/view/savings_page.dart';
+import 'package:novapay/features/send_money/presentation/cubit/send_money_cubit.dart';
+import 'package:novapay/features/send_money/presentation/view/biometric_confirm_page.dart';
 import 'package:novapay/features/send_money/presentation/view/send_money_page.dart';
 import 'package:novapay/features/wallet/domain/entities/activity_item.dart';
 import 'package:novapay/features/wallet/presentation/view/activity_page.dart';
@@ -22,6 +25,14 @@ final List<RouteBase> taskRoutes = [
     path: RoutesPath.sendMoney,
     name: RoutesName.sendMoney,
     builder: (context, state) => const SendMoneyPage(),
+  ),
+  GoRoute(
+    path: RoutesPath.biometricConfirm,
+    name: RoutesName.biometricConfirm,
+    builder: (context, state) => BlocProvider<SendMoneyCubit>.value(
+      value: state.extra! as SendMoneyCubit,
+      child: const BiometricConfirmPage(),
+    ),
   ),
   GoRoute(
     path: RoutesPath.addMoney,

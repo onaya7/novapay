@@ -3,15 +3,20 @@ import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:novapay/app/presentation/cubit/locale_cubit.dart';
 import 'package:novapay/app/presentation/cubit/theme_cubit.dart';
 import 'package:novapay/app/routes/routes_generator.dart';
 import 'package:novapay/config/theme/app_theme.dart';
 import 'package:novapay/core/injections/injection.dart';
+import 'package:novapay/core/notifications/notification_service.dart';
+import 'package:novapay/core/notifications/transfer_sync_notifier.dart';
 import 'package:novapay/features/profile/presentation/cubit/profile_cubit.dart';
 import 'package:novapay/l10n/l10n.dart';
 
-/// Both cubits here are app-wide: the theme paints every screen, and the
-/// profile name is read by the wallet greeting as well as the profile screen.
+/// Every cubit and service here is app-wide: the theme paints every screen,
+/// the profile name is read by the wallet greeting as well as the profile
+/// screen, and the sync notifier has to outlive any one screen to catch a
+/// send that finishes while the customer is elsewhere in the app.
 class App extends StatefulWidget {
   const new({super.key});
 
@@ -21,7 +26,10 @@ class App extends StatefulWidget {
 
 class _AppState extends State<App> {
   final ThemeCubit _theme = sl<ThemeCubit>();
+  final LocaleCubit _locale = sl<LocaleCubit>();
   final ProfileCubit _profile = sl<ProfileCubit>();
+  final NotificationService _notifications = sl<NotificationService>();
+  final TransferSyncNotifier _transferSyncNotifier = sl<TransferSyncNotifier>();
 
   // Built once and held here, not inline in build(): a fresh GoRouter on
   // every theme toggle would reset navigation back to the initial route.
@@ -32,6 +40,15 @@ class _AppState extends State<App> {
     super.initState();
     // Once, not per screen: two tabs read the same name.
     unawaited(_profile.start());
+    unawaited(
+      _notifications.initialize().then((_) => _transferSyncNotifier.start()),
+    );
+  }
+
+  @override
+  void dispose() {
+    unawaited(_transferSyncNotifier.dispose());
+    super.dispose();
   }
 
   @override
@@ -39,6 +56,7 @@ class _AppState extends State<App> {
     return MultiBlocProvider(
       providers: [
         BlocProvider<ThemeCubit>.value(value: _theme),
+        BlocProvider<LocaleCubit>.value(value: _locale),
         BlocProvider<ProfileCubit>.value(value: _profile),
       ],
       child: AppView(router: _router),
@@ -53,11 +71,13 @@ class AppView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final locale = context.watch<LocaleCubit>().state;
     return BlocBuilder<ThemeCubit, AppThemeMode>(
       builder: (context, mode) => MaterialApp.router(
         theme: AppTheme.light,
         darkTheme: AppTheme.dark,
         themeMode: mode.asThemeMode,
+        locale: locale.asLocale,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         routerConfig: router,
@@ -78,5 +98,21 @@ extension AppThemeModeX on AppThemeMode {
     AppThemeMode.system => 'System',
     AppThemeMode.light => 'Light',
     AppThemeMode.dark => 'Dark',
+  };
+}
+
+extension AppLocaleX on AppLocale {
+  /// Null follows the device locale, same as `AppThemeMode.system` for theme.
+  Locale? get asLocale => switch (this) {
+    AppLocale.system => null,
+    AppLocale.en => const Locale('en'),
+    AppLocale.ha => const Locale('ha'),
+  };
+
+  /// The word on the toggle.
+  String get label => switch (this) {
+    AppLocale.system => 'System',
+    AppLocale.en => 'English',
+    AppLocale.ha => 'Hausa',
   };
 }

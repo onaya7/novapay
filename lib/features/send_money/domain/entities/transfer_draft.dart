@@ -7,6 +7,9 @@ part 'transfer_draft.freezed.dart';
 
 enum SendStep { recipient, amount, confirm }
 
+/// Above this, confirm routes through a biometric prompt (UI/nav only) first.
+const int kBiometricConfirmThresholdKobo = 5000000;
+
 /// What the customer has filled in so far, plus the rules that decide whether
 /// they may go on. The screen asks this, so no rule lives in a widget.
 @freezed
@@ -29,6 +32,9 @@ abstract class TransferDraft with _$TransferDraft {
   bool get hasEnough => amount <= available;
 
   Money get remaining => available - amount;
+
+  bool get requiresBiometricConfirmation =>
+      amount.kobo >= kBiometricConfirmThresholdKobo;
 
   /// A blocked screen keeps a live call to action; only an empty one is dead.
   bool get canAdvance => switch (step) {

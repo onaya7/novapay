@@ -1,0 +1,3 @@
+tags:
+  golden:
+    description: A golden-image comparison test, run by alchemist.

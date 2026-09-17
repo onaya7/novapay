@@ -11,7 +11,7 @@
 
 ## Implementation status
 
-`621 tests, 100% line coverage` `[VERIFIED: fvm flutter test --coverage]`
+`641 tests, 100% line coverage` `[VERIFIED: fvm flutter test --coverage]`
 
 | Area | Status | Where |
 |---|---|---|
@@ -30,9 +30,22 @@
 | Routing — go_router, `StatefulShellRoute` for the four tabs, named routes for every task screen | **Built** | [`lib/app/routes/`](lib/app/routes/) |
 | Bank picker in Send Money — real banks, real NIP codes, bundled logos, searchable | **Built** | [`lib/features/send_money/`](lib/features/send_money/) |
 | Transaction detail — every activity row is tappable | **Built** | [`lib/features/wallet/presentation/view/transaction_detail_page.dart`](lib/features/wallet/presentation/view/transaction_detail_page.dart) |
+| Local notification on a queued **send** finishing sync | **Built** | [`lib/core/notifications/`](lib/core/notifications/) |
+| Localization scaffold — English, Spanish, Hausa; Send Money screen fully localized | **Built** | [`lib/l10n/`](lib/l10n/), [`lib/app/presentation/cubit/locale_cubit.dart`](lib/app/presentation/cubit/locale_cubit.dart) |
+| Golden tests — wallet home, loading/empty/populated, light/dark | **Built** | [`test/features/wallet/presentation/view/wallet_page_golden_test.dart`](test/features/wallet/presentation/view/wallet_page_golden_test.dart) |
+| Biometric confirmation above a threshold — **UI and navigation only** | **Built (stub)** | [`lib/features/send_money/presentation/view/biometric_confirm_page.dart`](lib/features/send_money/presentation/view/biometric_confirm_page.dart) |
 | Leases (durable single-flight), status-code-based retry classification | **`[DESIGN — not built]`** | Argued below; deliberately not built yet |
 
-The last row is the honest one. Those are the right answers for a production wallet and the reasoning for each is kept below, because the reasoning is the deliverable. They are not in the code, and this table is the only place that needs checking to know that.
+The last row is the honest one. That is the right answer for a production wallet and the reasoning is
+kept below, because the reasoning is the deliverable. It is not in the code, and this table is the
+only place that needs checking to know that.
+
+The four stretch-goal rows above are marked **Built**, not **`[DESIGN — not built]`**, but they are
+not built to the same bar as the brief's core scope: the biometric row is explicitly UI/navigation
+only (no `local_auth` call backs it), the notification and localization rows cover exactly the one
+screen and the one queue event asked for rather than the whole app, and the golden test covers one
+screen. See [Stretch goals](#stretch-goals-notifications-localization-golden-tests-biometric-stub)
+for what each one does and does not claim.
 
 ---
 
@@ -57,6 +70,8 @@ If you read three things: **[Offline and sync](#offline-and-sync)** → **[Money
 | Widget + integration tests | [Testing](#testing) |
 | What is actually built | [Implementation status](#implementation-status) |
 | AI usage | [AI_USAGE.md](AI_USAGE.md) |
+| Stretch goals: notifications, localization, golden tests, biometric stub | [Stretch goals](#stretch-goals-notifications-localization-golden-tests-biometric-stub) |
+| Folder structure | [Folder structure](#folder-structure) |
 
 ## How to read the claims
 
@@ -77,23 +92,28 @@ Flutter **3.47.2** stable / Dart **3.13** `[VERIFIED: flutter --version on the d
 
 The SDK is pinned with FVM (`.fvmrc`), so local commands take an `fvm` prefix. CI provisions its own SDK and runs them bare.
 
-```sh
-# Development
-fvm flutter run --flavor development --target lib/main_development.dart
-
-# Staging
-fvm flutter run --flavor staging --target lib/main_staging.dart
-
-# Production
-fvm flutter run --flavor production --target lib/main_production.dart
-```
+`make help` lists every target; the ones below are the ones you actually need day to day. Every
+target is a thin wrapper over the bare `fvm` command, so use the command directly if you'd rather
+not have `make` in the loop.
 
 ```sh
-fvm flutter test --coverage        # 621 tests, 100% line coverage
-fvm flutter analyze lib test       # exits non-zero on info, so treat any issue as a failure
-fvm dart format lib test
-fvm dart run bloc_tools:bloc lint . # the bloc rules live under a key `flutter analyze` ignores
-fvm dart run build_runner build    # freezed, json_serializable, injectable
+make run-dev            # fvm flutter run --flavor development --target lib/main_development.dart
+make run-staging        # --flavor staging
+make run-prod           # --flavor production
+
+make test               # fvm flutter test — 641 tests, goldens included
+make coverage           # fvm flutter test --coverage — the lcov CI actually gates on
+make golden             # only the golden-image tests (fvm flutter test --tags golden)
+make golden-update      # regenerate goldens after an intentional visual change
+
+make lint               # flutter analyze + the bloc_lint rules analyze does not run
+make format             # fvm dart format lib test, in place
+make format-check       # same, --set-exit-if-changed — what CI actually runs
+
+make codegen            # build_runner: freezed, json_serializable, injectable
+make gen-l10n           # regenerate lib/l10n/gen from lib/l10n/arb/*.arb
+
+make ci                 # format-check + lint + coverage, the same order CI runs them
 ```
 
 Two conventions that will trip a reader who skims:
@@ -102,6 +122,67 @@ Two conventions that will trip a reader who skims:
 - The Dart 3.13 **`const new({super.key})`** shorthand is used for unnamed constructors. It does **not** work for named ones — `const .named(...)` fails to compile — which is why `unnecessary_type_name_in_constructor` is disabled in `analysis_options.yaml`.
 
 **CI note, worth knowing before you push.** `.github/workflows/main.yaml` delegates to `very_good_workflows/flutter_package.yml@v1`, whose **`min_coverage` input defaults to `100`** `[VERIFIED: upstream workflow definition]`. A 100% line-coverage gate is a real force on this codebase, and it pushes toward exactly the tests that prove nothing. See [tests that lie](#tests-that-lie).
+
+---
+
+## Folder structure
+
+Feature-first, Clean Architecture inside each feature (`data` / `domain` / `presentation`), `test/`
+mirroring `lib/` path for path:
+
+```
+lib/
+├── main_{development,staging,production}.dart   Flavor entry points
+├── bootstrap.dart                 Hive, DI, BlocObserver, runApp — in that order
+├── app/
+│   ├── presentation/cubit/        ThemeCubit, LocaleCubit — app-wide, restored in the constructor
+│   ├── routes/                    RoutesName, RoutesPath, buildRouter() (go_router)
+│   └── view/                      App, AppShell (the four-tab StatefulShellRoute)
+├── config/
+│   ├── flavor/                    Flavor enum, FlavorConfig
+│   └── theme/                     AppTheme, AppThemeColors, custom_theme/
+├── core/
+│   ├── components/                Shared widgets — the only ones any screen may reach for
+│   ├── constants/                 AppColor, AppSize, StorageKeys
+│   ├── error/ exception/          Failure, AppException
+│   ├── extensions/                String, DateTime, int extensions
+│   ├── injections/                sl, configureDependencies(), RegisterModule
+│   ├── local_data/                LocalDataStorage (Hive CE), SecureLocalDataStorage
+│   ├── money/                     Money — the only place kobo is parsed, formatted or summed
+│   ├── network_info/               NetworkInfo (real reachability, not just a socket check)
+│   ├── notifications/             NotificationService, TransferSyncNotifier — stretch goal
+│   ├── sync/                      PendingAction, SyncService — the offline queue
+│   ├── time/                      Clock — injected everywhere the queue reads the time
+│   └── usecase/                   UseCase, StreamUseCase, NoParams
+├── features/
+│   ├── funding/                   Add money — data / domain / presentation
+│   ├── profile/                   Local display name, theme + language settings
+│   ├── savings/                   NovaSave goals
+│   ├── send_money/                Bank transfer, the bank picker, the biometric stub
+│   └── wallet/                    Wallet home, Activity tab, transaction detail
+├── gen/                           flutter_gen output — tracked, unlike build_runner's *.g.dart
+├── l10n/                          ARB sources (lib/l10n/arb/), gen/ output, the l10n extension
+├── server/                        The stand-in backend: models, repositories, services
+└── utils/                         logger, EitherSafeRunner, InternetSafeRunner
+```
+
+A feature follows the same three layers every time:
+
+```
+data/repositories/       Implementations, wrapping SyncService/NovaPayApi in EitherSafeRunner
+domain/entities/          Plain types the app reasons about (never a wire-format model)
+domain/repositories/      Abstract contracts returning Either<Failure, T>
+domain/usecases/          One action each, extending UseCase — presentation calls these, never a repository
+presentation/cubit/       Freezed sealed states; never imports Flutter (bloc_lint enforces this)
+presentation/view/        Screens only, zero comments (`.claude/rules/comments.md`)
+presentation/widgets/     Widgets extracted from this feature's views, one file per view stem
+```
+
+`domain/` imports neither `data/` nor Flutter. `data/` and `presentation/` both depend on `domain/`,
+never on each other. A feature never imports another feature's internals — a piece two features need
+is promoted to `core/`, the way `SyncService` and `Money` already are. Every feature has a doc in
+[`docs/features/`](docs/features/) with the same six headings: Purpose, Entry screens, Endpoints,
+State, Key files, Gotchas — read those before this section for anything feature-specific.
 
 ---
 
@@ -121,7 +202,83 @@ over them:
 | **NovaSave goal** | Create (name, target, date), contribute, progress bar with printed percentage |
 | **Transaction detail** | Amount, status, date, time and reference for any activity row — pushed by tapping one, on the Wallet tab or the Activity tab alike |
 
-**Explicitly deferred to post-launch**, so nobody half-starts them: localization beyond the English scaffold, biometric confirmation above a threshold, local notification on successful sync, and golden tests. Each is a stretch goal in the brief `[SOURCE: brief §2.4]` and each is a genuine enhancement, but none of them is the thing being graded.
+**Four stretch goals beyond the brief's core scope are also built** — a local notification on a
+queued send syncing, a localization scaffold (English, Spanish, Hausa) with the Send Money screen
+fully localized, golden tests for the wallet home screen, and a biometric-confirmation screen above
+a threshold amount. None of them is the thing being graded `[SOURCE: brief §2.4]`, and the biometric
+one is explicitly UI and navigation only — see [Stretch
+goals](#stretch-goals-notifications-localization-golden-tests-biometric-stub) for what each one
+does and does not claim.
+
+---
+
+## Stretch goals: notifications, localization, golden tests, biometric stub
+
+Each of these is real, tested code — not a placeholder screen — but each is scoped narrower than the
+core brief. What each one covers, and what it deliberately does not:
+
+### Local notification on a queued send syncing
+
+`lib/core/notifications/notification_service.dart` wraps `flutter_local_notifications` behind an
+interface, so nothing else in the app depends on the plugin directly. `TransferSyncNotifier`
+(`lib/core/notifications/transfer_sync_notifier.dart`) diffs `SyncService.changes` and fires exactly
+one notification the moment a **`send`** action transitions to `done` — never for a contribution or
+a top-up, and never twice for the same action, including across a cold start over an
+already-synced queue. It lives outside `SyncServiceImpl` on purpose: the queue itself stays
+Flutter-plugin-free and testable without a platform channel.
+
+**Setup:**
+- Android needs `POST_NOTIFICATIONS` (declared in `AndroidManifest.xml`, Android 13+) and core
+  library desugaring, both already wired (`android/app/build.gradle.kts`).
+- `NotificationService.initialize()` requests permission on first launch, from `App`'s
+  `_AppState.initState()` alongside starting `TransferSyncNotifier`.
+- **Not covered:** tapping the notification does not deep-link anywhere (no `onDidReceiveNotificationResponse` handler), and there is no in-app notification history — this is fire-and-forget, matching exactly what the brief asks for.
+
+### Localization scaffold — English, Spanish, Hausa
+
+`lib/l10n/arb/` holds three ARB files (`app_en.arb` the template, `app_es.arb`, `app_ha.arb`),
+generated by `flutter gen-l10n` into `lib/l10n/gen/` (gitignored, rebuilt by `make gen-l10n`). A new
+`LocaleCubit` (`lib/app/presentation/cubit/locale_cubit.dart`), restored in its constructor exactly
+like `ThemeCubit`, drives `MaterialApp.router`'s `locale:`; `AppLocale.system` follows the device.
+A language picker sits in Profile → Settings, next to the theme toggle.
+
+**The Send Money screen — every step, the receipt, the bank picker and the biometric stub — reads
+every user-facing string through `context.l10n`.** No other screen is localized yet; `walletTitle`
+was the only key before this change, and it stayed the only one outside Send Money. That is a
+deliberate scope boundary, not an oversight: fully localizing five features is a different-sized
+task than proving the scaffold works end to end on one.
+
+Hausa was chosen as the Nigerian language (Yoruba was the other option in the brief); translations
+are a competent best-effort, not a professionally reviewed localization — flag any of them to a
+native speaker before shipping.
+
+### Golden tests for the wallet home screen
+
+`test/features/wallet/presentation/view/wallet_page_golden_test.dart`, using `alchemist`. Four
+scenarios in one image (`test/features/wallet/presentation/view/goldens/ci/wallet_home.png`):
+loading (skeleton), empty (ready with no activity), populated (light), and the same populated state
+in dark. `test/flutter_test_config.dart` turns off platform goldens and keeps only the CI-font
+render, so the same golden file matches on a laptop and on CI — there is no per-OS golden set to
+keep in sync.
+
+Run `make golden` to check them, `make golden-update` after an intentional visual change to this
+screen. **Not covered:** every other screen still has zero golden coverage; this proves the pattern
+works, not that the whole app is pinned visually.
+
+### Biometric confirmation above a threshold — UI and navigation only
+
+Above `kBiometricConfirmThresholdKobo` (₦50,000, `lib/features/send_money/domain/entities/transfer_draft.dart`),
+the confirm step's Send button pushes `BiometricConfirmPage`
+(`lib/features/send_money/presentation/view/biometric_confirm_page.dart`) instead of calling
+`cubit.submit()` directly. The page shows a fingerprint icon and a timed 900ms delay to read as a
+prompt, then calls the same `submit()` on the same `SendMoneyCubit` (handed across the route as
+`extra`, not a new instance) and pops.
+
+**There is no `local_auth` call anywhere in this path.** No Face ID, no fingerprint sensor, no
+device-credential fallback — a fast tap or an automated test gets through exactly as easily as a
+real prompt would. This is UI and navigation only, precisely as scoped, and the code says so at the
+threshold constant. Wiring a real `local_auth` check is the natural next step and touches only this
+one screen.
 
 ---
 
@@ -565,7 +722,7 @@ The target device is a low-end Android phone, not the simulator on a fast laptop
 
 ## Testing
 
-`621 tests, 100% line coverage` `[VERIFIED]`. The 100% figure is a CI gate, not an achievement — see [tests that lie](#tests-that-lie).
+`641 tests, 100% line coverage` `[VERIFIED]`. The 100% figure is a CI gate, not an achievement — see [tests that lie](#tests-that-lie).
 
 ### The matrix
 
@@ -575,6 +732,7 @@ The target device is a low-end Android phone, not the simulator on a fast laptop
 | **Component** | Buttons, chips, scaffold, money text, empty and error states — including their semantics | Built |
 | **Behavioral** | Queue against a real `LocalDataStorage` and a real server: offline, reconnect, retry, restart, replay | Built |
 | **Widget** | Every screen and every state: the three send steps, goal create and contribute, the Pending chip, the empty and error states | Built |
+| **Golden** | Wallet home — loading, empty, populated, light and dark, on `alchemist`'s CI-stable renderer | Built (wallet home only) |
 | **Integration** | offline → enqueue → kill app → relaunch → reconnect → **exactly one send**, on a device | **`[DESIGN — not built]`** |
 
 ### The tests that actually catch a regression

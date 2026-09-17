@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:novapay/app/presentation/cubit/locale_cubit.dart';
 import 'package:novapay/app/presentation/cubit/theme_cubit.dart';
 import 'package:novapay/app/view/app.dart';
 import 'package:novapay/config/theme/app_theme_colors.dart';
@@ -110,6 +111,27 @@ class ThemeModeToggle extends StatelessWidget {
         selected: {mode},
         onSelectionChanged: (selection) =>
             context.read<ThemeCubit>().setMode(selection.single),
+      ),
+    );
+  }
+}
+
+/// English, Hausa, or follow the device.
+class LocaleToggle extends StatelessWidget {
+  const new({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<LocaleCubit, AppLocale>(
+      builder: (context, locale) => SegmentedButton<AppLocale>(
+        showSelectedIcon: false,
+        segments: [
+          for (final option in AppLocale.values)
+            ButtonSegment<AppLocale>(value: option, label: Text(option.label)),
+        ],
+        selected: {locale},
+        onSelectionChanged: (selection) =>
+            context.read<LocaleCubit>().setLocale(selection.single),
       ),
     );
   }

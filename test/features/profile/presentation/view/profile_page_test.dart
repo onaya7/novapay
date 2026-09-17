@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:novapay/app/presentation/cubit/locale_cubit.dart';
 import 'package:novapay/app/presentation/cubit/theme_cubit.dart';
 import 'package:novapay/core/components/state_widgets.dart';
 import 'package:novapay/features/profile/domain/entities/user_profile.dart';
@@ -15,9 +16,12 @@ class _MockProfileCubit extends MockCubit<ProfileState> implements ProfileCubit;
 
 class _MockThemeCubit extends MockCubit<AppThemeMode> implements ThemeCubit;
 
+class _MockLocaleCubit extends MockCubit<AppLocale> implements LocaleCubit;
+
 void main() {
   late _MockProfileCubit profile;
   late _MockThemeCubit theme;
+  late _MockLocaleCubit locale;
 
   Future<void> pump(WidgetTester tester, ProfileState state) {
     whenListen(
@@ -30,23 +34,34 @@ void main() {
         providers: [
           BlocProvider<ProfileCubit>.value(value: profile),
           BlocProvider<ThemeCubit>.value(value: theme),
+          BlocProvider<LocaleCubit>.value(value: locale),
         ],
         child: const ProfileView(),
       ),
     );
   }
 
-  setUpAll(() => registerFallbackValue(AppThemeMode.system));
+  setUpAll(() {
+    registerFallbackValue(AppThemeMode.system);
+    registerFallbackValue(AppLocale.system);
+  });
 
   setUp(() {
     profile = _MockProfileCubit();
     theme = _MockThemeCubit();
+    locale = _MockLocaleCubit();
     whenListen(
       theme,
       const Stream<AppThemeMode>.empty(),
       initialState: AppThemeMode.system,
     );
+    whenListen(
+      locale,
+      const Stream<AppLocale>.empty(),
+      initialState: AppLocale.system,
+    );
     when(() => theme.setMode(any())).thenAnswer((_) async {});
+    when(() => locale.setLocale(any())).thenAnswer((_) async {});
     when(() => profile.rename(any())).thenAnswer((_) async {});
     when(profile.start).thenAnswer((_) async {});
   });
@@ -108,6 +123,15 @@ void main() {
     await tester.tap(find.text('Dark'));
 
     verify(() => theme.setMode(AppThemeMode.dark)).called(1);
+  });
+
+  testWidgets('the language toggle switches locale', (tester) async {
+    await pump(tester, const ProfileState.ready(UserProfile()));
+    await tester.ensureVisible(find.text('Hausa'));
+
+    await tester.tap(find.text('Hausa'));
+
+    verify(() => locale.setLocale(AppLocale.ha)).called(1);
   });
 
   testWidgets('ProfilePage renders the view', (tester) async {

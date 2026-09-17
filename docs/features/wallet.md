@@ -40,6 +40,9 @@ send appears without a reload. `refresh()` backs pull-to-refresh and the error r
    cubit of its own.
 7. `presentation/widgets/wallet_widgets.dart` — header, balance card, actions, activity row,
    skeleton.
+8. `presentation/view/wallet_page_golden_test.dart` (in `test/`) — the loading, empty and populated
+   states, light and dark, rendered with `alchemist`'s CI font so the golden is stable off this
+   machine too. Run `fvm flutter test --update-goldens` after any visual change to this screen.
 
 ## Gotchas
 - **A `done` action is skipped in the merge.** Once the queue settles an action the server owns it,

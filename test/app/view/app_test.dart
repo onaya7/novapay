@@ -3,10 +3,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:novapay/app/app.dart';
+import 'package:novapay/app/presentation/cubit/locale_cubit.dart';
 import 'package:novapay/app/presentation/cubit/theme_cubit.dart';
 import 'package:novapay/config/theme/app_theme.dart';
 import 'package:novapay/config/theme/app_theme_colors.dart';
 import 'package:novapay/core/injections/injection.dart';
+import 'package:novapay/core/notifications/notification_service.dart';
+import 'package:novapay/core/notifications/transfer_sync_notifier.dart';
 import 'package:novapay/features/profile/presentation/cubit/profile_cubit.dart';
 import 'package:novapay/features/profile/presentation/view/profile_page.dart';
 import 'package:novapay/features/savings/presentation/cubit/savings_cubit.dart';
@@ -21,7 +24,13 @@ class _MockSavingsCubit extends MockCubit<SavingsState> implements SavingsCubit;
 
 class _MockThemeCubit extends MockCubit<AppThemeMode> implements ThemeCubit;
 
+class _MockLocaleCubit extends MockCubit<AppLocale> implements LocaleCubit;
+
 class _MockProfileCubit extends MockCubit<ProfileState> implements ProfileCubit;
+
+class _MockNotificationService extends Mock implements NotificationService;
+
+class _MockTransferSyncNotifier extends Mock implements TransferSyncNotifier;
 
 void main() {
   setUp(() {
@@ -61,6 +70,23 @@ void main() {
       initialState: const ProfileState.loading(),
     );
     sl.registerFactory<ProfileCubit>(() => profile);
+
+    final locale = _MockLocaleCubit();
+    whenListen(
+      locale,
+      const Stream<AppLocale>.empty(),
+      initialState: AppLocale.system,
+    );
+    sl.registerFactory<LocaleCubit>(() => locale);
+
+    final notifications = _MockNotificationService();
+    when(notifications.initialize).thenAnswer((_) async {});
+    sl.registerFactory<NotificationService>(() => notifications);
+
+    final transferSyncNotifier = _MockTransferSyncNotifier();
+    when(transferSyncNotifier.start).thenAnswer((_) async {});
+    when(transferSyncNotifier.dispose).thenAnswer((_) async {});
+    sl.registerFactory<TransferSyncNotifier>(() => transferSyncNotifier);
   });
 
   tearDown(sl.reset);

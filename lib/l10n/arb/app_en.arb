@@ -3,5 +3,192 @@
     "walletTitle": "Wallet",
     "@walletTitle": {
         "description": "Title of the wallet home screen"
+    },
+    "sendMoneyRecipientStepTitle": "Send to",
+    "@sendMoneyRecipientStepTitle": {
+        "description": "App bar title, Send Money step 1"
+    },
+    "sendMoneyAmountStepTitle": "How much?",
+    "@sendMoneyAmountStepTitle": {
+        "description": "App bar title, Send Money step 2"
+    },
+    "sendMoneyConfirmStepTitle": "Confirm",
+    "@sendMoneyConfirmStepTitle": {
+        "description": "App bar title, Send Money step 3"
+    },
+    "bankLabel": "Bank",
+    "@bankLabel": {
+        "description": "Label above the bank selector"
+    },
+    "chooseBankHint": "Choose a bank",
+    "@chooseBankHint": {
+        "description": "Placeholder before a bank is picked, and the picker sheet's title"
+    },
+    "searchLabel": "Search",
+    "@searchLabel": {
+        "description": "Label on the bank picker's search field"
+    },
+    "bankNameHint": "Bank name",
+    "@bankNameHint": {
+        "description": "Hint on the bank picker's search field"
+    },
+    "noBanksMatch": "No banks match that search",
+    "@noBanksMatch": {
+        "description": "Empty state in the bank picker"
+    },
+    "accountNumberLabel": "Account number",
+    "@accountNumberLabel": {
+        "description": "Label on the account number field"
+    },
+    "accountNumberHelper": "A ten-digit NUBAN account number",
+    "@accountNumberHelper": {
+        "description": "Helper text under the account number field"
+    },
+    "accountNumberError": "That is not a ten-digit account number",
+    "@accountNumberError": {
+        "description": "Validation error on the account number field"
+    },
+    "fromWalletLabel": "From your wallet",
+    "@fromWalletLabel": {
+        "description": "Row label, amount step summary card"
+    },
+    "amountAvailable": "{amount} available",
+    "@amountAvailable": {
+        "description": "How much of the wallet balance can be spent",
+        "placeholders": {
+            "amount": {
+                "type": "String"
+            }
+        }
+    },
+    "sendingLabel": "Sending",
+    "@sendingLabel": {
+        "description": "Label on the amount-entry figure"
+    },
+    "amountFieldLabel": "Amount",
+    "@amountFieldLabel": {
+        "description": "Label on the amount text field"
+    },
+    "enterAmountHelper": "Enter how much to send",
+    "@enterAmountHelper": {
+        "description": "Helper text before an amount is entered"
+    },
+    "notEnoughHelper": "That is more than you have available",
+    "@notEnoughHelper": {
+        "description": "Helper text when the amount exceeds the balance"
+    },
+    "amountLeftAfter": "{amount} left after this",
+    "@amountLeftAfter": {
+        "description": "Helper text showing the remaining balance",
+        "placeholders": {
+            "amount": {
+                "type": "String"
+            }
+        }
+    },
+    "checkBeforeSend": "Check this before we send it.",
+    "@checkBeforeSend": {
+        "description": "Intro line on the confirm step"
+    },
+    "toLabel": "To",
+    "@toLabel": {
+        "description": "Row label, confirm step summary card"
+    },
+    "amountLabel": "Amount",
+    "@amountLabel": {
+        "description": "Row label, confirm step summary card"
+    },
+    "feeLabel": "Fee",
+    "@feeLabel": {
+        "description": "Row label, confirm step summary card"
+    },
+    "noFee": "No fee",
+    "@noFee": {
+        "description": "Row value, confirm step summary card"
+    },
+    "leftAfterLabel": "Left after this",
+    "@leftAfterLabel": {
+        "description": "Row label, confirm step summary card"
+    },
+    "savedBeforeSendingNote": "We save this before sending, so it is not lost if you go offline.",
+    "@savedBeforeSendingNote": {
+        "description": "Reassurance line under the confirm step summary card"
+    },
+    "continueButton": "Continue",
+    "@continueButton": {
+        "description": "CTA advancing to the next step"
+    },
+    "sendAmountButton": "Send {amount}",
+    "@sendAmountButton": {
+        "description": "CTA submitting the transfer",
+        "placeholders": {
+            "amount": {
+                "type": "String"
+            }
+        }
+    },
+    "cancelButton": "Cancel",
+    "@cancelButton": {
+        "description": "CTA cancelling the confirm step"
+    },
+    "fundWalletButton": "Fund Wallet",
+    "@fundWalletButton": {
+        "description": "CTA opening the funding flow when the amount is blocked"
+    },
+    "queuedTitle": "Queued",
+    "@queuedTitle": {
+        "description": "App bar title, receipt when the send is still pending"
+    },
+    "sentTitle": "Sent",
+    "@sentTitle": {
+        "description": "App bar title, receipt when the send is settled"
+    },
+    "backToWalletButton": "Back to wallet",
+    "@backToWalletButton": {
+        "description": "CTA leaving the receipt screen"
+    },
+    "receiptQueuedHeadline": "Queued",
+    "@receiptQueuedHeadline": {
+        "description": "Receipt headline when the send is still pending"
+    },
+    "receiptSentHeadline": "Money sent",
+    "@receiptSentHeadline": {
+        "description": "Receipt headline when the send is settled"
+    },
+    "receiptQueuedMessage": "We'll send this as soon as you have a network. It is saved, so closing the app will not lose it.",
+    "@receiptQueuedMessage": {
+        "description": "Receipt body when the send is still pending"
+    },
+    "receiptSentMessage": "{amount} is on its way to {bank}, {account}.",
+    "@receiptSentMessage": {
+        "description": "Receipt body when the send is settled",
+        "placeholders": {
+            "amount": {
+                "type": "String"
+            },
+            "bank": {
+                "type": "String"
+            },
+            "account": {
+                "type": "String"
+            }
+        }
+    },
+    "biometricConfirmTitle": "Confirm it's you",
+    "@biometricConfirmTitle": {
+        "description": "Title of the biometric confirmation stub screen"
+    },
+    "biometricConfirmBody": "Use your fingerprint or Face ID to confirm this transfer of {amount}.",
+    "@biometricConfirmBody": {
+        "description": "Body copy on the biometric confirmation stub screen",
+        "placeholders": {
+            "amount": {
+                "type": "String"
+            }
+        }
+    },
+    "biometricConfirmButton": "Confirm & Send",
+    "@biometricConfirmButton": {
+        "description": "CTA on the biometric confirmation stub screen"
     }
 }

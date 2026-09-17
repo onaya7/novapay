@@ -99,6 +99,16 @@ class _Ready extends StatelessWidget {
           ),
           AppSize.h(AppSize.lg),
           const SettingsGroup(
+            title: 'LANGUAGE',
+            children: [
+              Padding(
+                padding: EdgeInsets.symmetric(vertical: AppSize.smd),
+                child: LocaleToggle(),
+              ),
+            ],
+          ),
+          AppSize.h(AppSize.lg),
+          const SettingsGroup(
             title: 'ABOUT',
             children: [
               SettingsRow(label: 'Version', value: '1.0.0'),

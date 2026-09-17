@@ -1,15 +1,19 @@
 import 'dart:io';
 
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
+import 'package:novapay/app/presentation/cubit/locale_cubit.dart';
 import 'package:novapay/config/flavor/flavor.dart';
 import 'package:novapay/config/flavor/flavor_config.dart';
 import 'package:novapay/core/injections/injection.dart';
 import 'package:novapay/core/local_data/local_data_storage.dart';
 import 'package:novapay/core/local_data/secure_local_data_storage.dart';
 import 'package:novapay/core/network_info/network_info.dart';
+import 'package:novapay/core/notifications/notification_service.dart';
+import 'package:novapay/core/notifications/transfer_sync_notifier.dart';
 import 'package:novapay/core/sync/sync_service.dart';
 import 'package:novapay/features/savings/data/repositories/savings_repository_impl.dart';
 import 'package:novapay/features/savings/domain/repositories/savings_repository.dart';
@@ -50,6 +54,20 @@ void main() {
   test('resolves connectivity', () {
     expect(sl<InternetConnection>(), isA<InternetConnection>());
     expect(sl<NetworkInfo>(), isA<NetworkInfoImpl>());
+  });
+
+  test('resolves notifications and locale, app-wide singletons both', () {
+    expect(
+      sl<FlutterLocalNotificationsPlugin>(),
+      isA<FlutterLocalNotificationsPlugin>(),
+    );
+    expect(sl<NotificationService>(), isA<NotificationServiceImpl>());
+    expect(sl<LocaleCubit>(), isA<LocaleCubit>());
+    expect(sl<TransferSyncNotifier>(), isA<TransferSyncNotifier>());
+    expect(
+      identical(sl<NotificationService>(), sl<NotificationService>()),
+      isTrue,
+    );
   });
 
   test('resolves the wallet graph down to its error translator', () {

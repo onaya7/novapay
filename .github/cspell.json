@@ -27,10 +27,12 @@
     "entrancy",
     "fintech",
     "fvmrc",
+    "goldens",
     "Hola",
     "idempotency",
     "idempotent",
     "interleavings",
+    "jailbroken",
     "localizable",
     "microtask",
     "mostrado",
@@ -49,6 +51,7 @@
     "toggleable",
     "touchpoints",
     "unformat",
-    "usecase"
+    "usecase",
+    "usecases"
   ]
 }

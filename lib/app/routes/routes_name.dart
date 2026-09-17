@@ -6,6 +6,7 @@ abstract class RoutesName {
   static const String activity = 'activity';
   static const String profile = 'profile';
   static const String sendMoney = 'sendMoney';
+  static const String biometricConfirm = 'biometricConfirm';
   static const String addMoney = 'addMoney';
   static const String createGoal = 'createGoal';
   static const String contribute = 'contribute';

@@ -13,6 +13,7 @@ import 'package:novapay/features/send_money/domain/entities/bank.dart';
 import 'package:novapay/features/send_money/domain/entities/transfer_draft.dart';
 import 'package:novapay/features/send_money/domain/entities/transfer_receipt.dart';
 import 'package:novapay/features/send_money/presentation/cubit/send_money_cubit.dart';
+import 'package:novapay/features/send_money/presentation/view/biometric_confirm_page.dart';
 import 'package:novapay/features/send_money/presentation/view/send_money_page.dart';
 import 'package:novapay/features/send_money/presentation/widgets/send_money_widgets.dart';
 
@@ -331,6 +332,30 @@ void main() {
       await tester.tap(find.byType(CustomButton).first);
       verify(cubit.submit).called(1);
     });
+
+    testWidgets(
+      'above the biometric threshold, Send opens the biometric prompt first',
+      (tester) async {
+        await pumpView(
+          tester,
+          const SendMoneyState.editing(
+            TransferDraft(
+              step: SendStep.confirm,
+              bank: _bank,
+              recipient: '0123456789',
+              amount: Money.fromKobo(6000000),
+              available: Money.fromKobo(6000000),
+            ),
+          ),
+        );
+
+        await tester.tap(find.byType(CustomButton).first);
+        await tester.pump();
+
+        expect(find.byType(BiometricConfirmPage), findsOneWidget);
+        verifyNever(cubit.submit);
+      },
+    );
 
     testWidgets('Cancel abandons the transfer without sending', (tester) async {
       await pumpView(

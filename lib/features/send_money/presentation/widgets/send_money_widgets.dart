@@ -13,6 +13,7 @@ import 'package:novapay/features/send_money/domain/entities/transfer_draft.dart'
 import 'package:novapay/features/send_money/domain/entities/transfer_receipt.dart';
 import 'package:novapay/features/send_money/presentation/widgets/bank_avatar.dart';
 import 'package:novapay/features/send_money/presentation/widgets/bank_picker_sheet.dart';
+import 'package:novapay/l10n/l10n.dart';
 
 /// Step one: which bank, then who the money is going to.
 class RecipientStep extends StatelessWidget {
@@ -31,6 +32,7 @@ class RecipientStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final showError = draft.recipient.isNotEmpty && !draft.recipientIsValid;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -38,12 +40,10 @@ class RecipientStep extends StatelessWidget {
         _BankSelector(bank: draft.bank, onTap: () => _pickBank(context)),
         AppSize.h(AppSize.mdl),
         CustomInputField(
-          label: 'Account number',
+          label: l10n.accountNumberLabel,
           hint: '0123456789',
-          helper: 'A ten-digit NUBAN account number',
-          errorText: showError
-              ? 'That is not a ten-digit account number'
-              : null,
+          helper: l10n.accountNumberHelper,
+          errorText: showError ? l10n.accountNumberError : null,
           keyboardType: TextInputType.number,
           inputFormatters: [
             FilteringTextInputFormatter.digitsOnly,
@@ -80,13 +80,14 @@ class _BankSelector extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
     final texts = Theme.of(context).textTheme;
+    final l10n = context.l10n;
     final chosen = bank;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Bank',
+          l10n.bankLabel,
           style: texts.labelLarge?.copyWith(color: colors.textSubheading),
         ),
         AppSize.h(AppSize.sm),
@@ -107,7 +108,7 @@ class _BankSelector extends StatelessWidget {
                   ],
                   Expanded(
                     child: Text(
-                      chosen?.name ?? 'Choose a bank',
+                      chosen?.name ?? l10n.chooseBankHint,
                       style: texts.bodyLarge?.copyWith(
                         color: chosen == null ? colors.subtext : null,
                       ),
@@ -163,6 +164,7 @@ class _AmountStepState extends State<AmountStep> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final draft = widget.draft;
     final presets = <Money>[
       const Money.fromKobo(100000),
@@ -176,21 +178,21 @@ class _AmountStepState extends State<AmountStep> {
         SummaryCard(
           children: [
             SummaryRow(
-              label: 'From your wallet',
-              value: '${draft.available.format()} available',
+              label: l10n.fromWalletLabel,
+              value: l10n.amountAvailable(draft.available.format()),
             ),
           ],
         ),
         AppSize.h(AppSize.xl),
         AmountDisplay(
           amount: draft.amount,
-          label: 'Sending',
-          helper: _helper(draft),
+          label: l10n.sendingLabel,
+          helper: _helper(l10n, draft),
           hasError: draft.amountIsEntered && !draft.hasEnough,
         ),
         AppSize.h(AppSize.lg),
         CustomInputField(
-          label: 'Amount',
+          label: l10n.amountFieldLabel,
           hint: '0.00',
           controller: _controller,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -212,10 +214,10 @@ class _AmountStepState extends State<AmountStep> {
     );
   }
 
-  String _helper(TransferDraft draft) {
-    if (!draft.amountIsEntered) return 'Enter how much to send';
-    if (!draft.hasEnough) return 'That is more than you have available';
-    return '${draft.remaining.format()} left after this';
+  String _helper(AppLocalizations l10n, TransferDraft draft) {
+    if (!draft.amountIsEntered) return l10n.enterAmountHelper;
+    if (!draft.hasEnough) return l10n.notEnoughHelper;
+    return l10n.amountLeftAfter(draft.remaining.format());
   }
 }
 
@@ -228,23 +230,27 @@ class ConfirmStep extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
+    final l10n = context.l10n;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'Check this before we send it.',
+          l10n.checkBeforeSend,
           style: Theme.of(context).textTheme.bodyMedium
               ?.copyWith(color: colors.textSubheading),
         ),
         AppSize.h(AppSize.md),
         SummaryCard(
           children: [
-            SummaryRow(label: 'Bank', value: draft.bank?.name ?? '—'),
-            SummaryRow(label: 'To', value: draft.recipient.maskedAccountNumber),
-            SummaryRow(label: 'Amount', value: draft.amount.format()),
-            const SummaryRow(label: 'Fee', value: 'No fee'),
+            SummaryRow(label: l10n.bankLabel, value: draft.bank?.name ?? '—'),
             SummaryRow(
-              label: 'Left after this',
+              label: l10n.toLabel,
+              value: draft.recipient.maskedAccountNumber,
+            ),
+            SummaryRow(label: l10n.amountLabel, value: draft.amount.format()),
+            SummaryRow(label: l10n.feeLabel, value: l10n.noFee),
+            SummaryRow(
+              label: l10n.leftAfterLabel,
               value: draft.remaining.format(),
               emphasised: true,
             ),
@@ -252,7 +258,7 @@ class ConfirmStep extends StatelessWidget {
         ),
         AppSize.h(AppSize.md),
         Text(
-          'We save this before sending, so it is not lost if you go offline.',
+          l10n.savedBeforeSendingNote,
           style: Theme.of(context).textTheme.bodySmall
               ?.copyWith(color: colors.subtext),
         ),
@@ -271,6 +277,7 @@ class ReceiptStep extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
     final texts = Theme.of(context).textTheme;
+    final l10n = context.l10n;
     final pending = receipt.isPending;
 
     return Column(
@@ -295,31 +302,32 @@ class ReceiptStep extends StatelessWidget {
         ),
         AppSize.h(AppSize.lg),
         Text(
-          pending ? 'Queued' : 'Money sent',
+          pending ? l10n.receiptQueuedHeadline : l10n.receiptSentHeadline,
           style: texts.headlineMedium,
           textAlign: TextAlign.center,
         ),
         AppSize.h(AppSize.sm),
         Text(
           pending
-              ? "We'll send this as soon as you have a network. "
-                    'It is saved, so closing the app will not lose it.'
-              : '${receipt.amount.format()} is on its way to '
-                    '${receipt.bankName}, '
-                    '${receipt.recipient.maskedAccountNumber}.',
+              ? l10n.receiptQueuedMessage
+              : l10n.receiptSentMessage(
+                  receipt.amount.format(),
+                  receipt.bankName,
+                  receipt.recipient.maskedAccountNumber,
+                ),
           textAlign: TextAlign.center,
           style: texts.bodyMedium?.copyWith(color: colors.textSubheading),
         ),
         AppSize.h(AppSize.lg),
         SummaryCard(
           children: [
-            SummaryRow(label: 'Bank', value: receipt.bankName),
+            SummaryRow(label: l10n.bankLabel, value: receipt.bankName),
             SummaryRow(
-              label: 'To',
+              label: l10n.toLabel,
               value: receipt.recipient.maskedAccountNumber,
             ),
             SummaryRow(
-              label: 'Amount',
+              label: l10n.amountLabel,
               value: receipt.amount.format(),
               emphasised: true,
             ),

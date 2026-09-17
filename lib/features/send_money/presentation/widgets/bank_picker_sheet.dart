@@ -4,6 +4,7 @@ import 'package:novapay/core/components/custom_input_field.dart';
 import 'package:novapay/core/constants/app_size.dart';
 import 'package:novapay/features/send_money/domain/entities/bank.dart';
 import 'package:novapay/features/send_money/presentation/widgets/bank_avatar.dart';
+import 'package:novapay/l10n/l10n.dart';
 
 /// A searchable bank list, presented with `showModalBottomSheet` and
 /// resolving with the chosen [Bank]. Self-contained: it takes the list it
@@ -48,6 +49,7 @@ class _BankPickerSheetState extends State<BankPickerSheet> {
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
     final texts = Theme.of(context).textTheme;
+    final l10n = context.l10n;
 
     return SizedBox(
       height: MediaQuery.sizeOf(context).height * 0.75,
@@ -69,11 +71,11 @@ class _BankPickerSheetState extends State<BankPickerSheet> {
                   ),
                 ),
               ),
-              Text('Choose a bank', style: texts.titleLarge),
+              Text(l10n.chooseBankHint, style: texts.titleLarge),
               AppSize.h(AppSize.md),
               CustomInputField(
-                label: 'Search',
-                hint: 'Bank name',
+                label: l10n.searchLabel,
+                hint: l10n.bankNameHint,
                 controller: _search,
                 autofocus: true,
                 onChanged: _filter,
@@ -83,7 +85,7 @@ class _BankPickerSheetState extends State<BankPickerSheet> {
                 child: _filtered.isEmpty
                     ? Center(
                         child: Text(
-                          'No banks match that search',
+                          l10n.noBanksMatch,
                           style: texts.bodyMedium?.copyWith(
                             color: colors.subtext,
                           ),

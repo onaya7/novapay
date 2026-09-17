@@ -1,3 +1,4 @@
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:injectable/injectable.dart';
@@ -10,6 +11,10 @@ import 'package:uuid/uuid.dart';
 abstract class RegisterModule {
   @lazySingleton
   InternetConnection get internetConnection => InternetConnection();
+
+  @lazySingleton
+  FlutterLocalNotificationsPlugin get notificationsPlugin =>
+      FlutterLocalNotificationsPlugin();
 
   @lazySingleton
   EitherSafeRunner get eitherSafeRunner => const EitherSafeRunner();

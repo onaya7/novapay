@@ -6,6 +6,7 @@ abstract class RoutesPath {
   static const String activity = '/activity';
   static const String profile = '/profile';
   static const String sendMoney = '/send-money';
+  static const String biometricConfirm = '/send-money/biometric-confirm';
   static const String addMoney = '/add-money';
   static const String createGoal = '/create-goal';
   static const String contribute = '/contribute';
