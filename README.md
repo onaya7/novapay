@@ -11,7 +11,7 @@
 
 ## Implementation status
 
-`589 tests, 100% line coverage` `[VERIFIED: fvm flutter test --coverage]`
+`621 tests, 100% line coverage` `[VERIFIED: fvm flutter test --coverage]`
 
 | Area | Status | Where |
 |---|---|---|
@@ -26,7 +26,10 @@
 | NovaSave goal — create, contribute, integer-basis-point progress | **Built** | [`lib/features/savings/`](lib/features/savings/) |
 | Add money — real funding flow, offline queueing, wallet quick action and Send Money's `Fund Wallet` both route to it | **Built** | [`lib/features/funding/`](lib/features/funding/) |
 | Local profile — device-only display name and avatar photo, both read by the wallet greeting | **Built** | [`lib/features/profile/`](lib/features/profile/) |
-| Four-tab bottom nav, light/dark/system theme | **Built** | [`lib/app/`](lib/app/), [`lib/core/components/custom_navigation_bar.dart`](lib/core/components/custom_navigation_bar.dart) |
+| Four-tab bottom nav, translucent and blurred, light/dark/system theme | **Built** | [`lib/app/`](lib/app/), [`lib/core/components/custom_navigation_bar.dart`](lib/core/components/custom_navigation_bar.dart) |
+| Routing — go_router, `StatefulShellRoute` for the four tabs, named routes for every task screen | **Built** | [`lib/app/routes/`](lib/app/routes/) |
+| Bank picker in Send Money — real banks, real NIP codes, bundled logos, searchable | **Built** | [`lib/features/send_money/`](lib/features/send_money/) |
+| Transaction detail — every activity row is tappable | **Built** | [`lib/features/wallet/presentation/view/transaction_detail_page.dart`](lib/features/wallet/presentation/view/transaction_detail_page.dart) |
 | Leases (durable single-flight), status-code-based retry classification | **`[DESIGN — not built]`** | Argued below; deliberately not built yet |
 
 The last row is the honest one. Those are the right answers for a production wallet and the reasoning for each is kept below, because the reasoning is the deliverable. They are not in the code, and this table is the only place that needs checking to know that.
@@ -86,7 +89,7 @@ fvm flutter run --flavor production --target lib/main_production.dart
 ```
 
 ```sh
-fvm flutter test --coverage        # 589 tests, 100% line coverage
+fvm flutter test --coverage        # 621 tests, 100% line coverage
 fvm flutter analyze lib test       # exits non-zero on info, so treat any issue as a failure
 fvm dart format lib test
 fvm dart run bloc_tools:bloc lint . # the bloc rules live under a key `flutter analyze` ignores
@@ -113,9 +116,10 @@ over them:
 | **Savings** (tab) | The NovaSave goal list |
 | **Activity** (tab) | The full merged history — the same snapshot the wallet's recent list reads |
 | **Profile** (tab) | Avatar, device-only display name, Settings (theme, About) |
-| **Send Money** | Recipient → amount → confirm, as three steps, pushed from the wallet |
+| **Send Money** | Bank → account number → amount → confirm, pushed from the wallet. The bank picker is a searchable bottom sheet, not a fourth step |
 | **Add money** | A real funding flow — amount, quick presets, balance-after preview — pushed from the wallet's quick action and from Send Money's `Fund Wallet` CTA when a transfer is blocked |
 | **NovaSave goal** | Create (name, target, date), contribute, progress bar with printed percentage |
+| **Transaction detail** | Amount, status, date, time and reference for any activity row — pushed by tapping one, on the Wallet tab or the Activity tab alike |
 
 **Explicitly deferred to post-launch**, so nobody half-starts them: localization beyond the English scaffold, biometric confirmation above a threshold, local notification on successful sync, and golden tests. Each is a stretch goal in the brief `[SOURCE: brief §2.4]` and each is a genuine enhancement, but none of them is the thing being graded.
 
@@ -561,7 +565,7 @@ The target device is a low-end Android phone, not the simulator on a fast laptop
 
 ## Testing
 
-`589 tests, 100% line coverage` `[VERIFIED]`. The 100% figure is a CI gate, not an achievement — see [tests that lie](#tests-that-lie).
+`621 tests, 100% line coverage` `[VERIFIED]`. The 100% figure is a CI gate, not an achievement — see [tests that lie](#tests-that-lie).
 
 ### The matrix
 
@@ -607,6 +611,7 @@ Every judgment the brief's ambiguities forced.
 | 4 | Idempotency keys are retained server-side for at least 24h | Entries queued longer than the window lose deduplication and must escalate to a user decision |
 | 5 | One isolate owns the queue | A background-isolate enqueue path needs a separate inbox box; Hive CE cannot coordinate across isolates |
 | 6 | An OFL typeface is acceptable where a proprietary brand face would normally sit | If a licensed brand face is mandated, the ramp is defined by size and weight, so it swaps in by changing one `fontFamily` without retuning the layout |
+| 7 | Real bank logos, bundled locally and used only for recipient identification (the same nominative use every banking app makes of them), are acceptable in a fictional scenario | If not, `BankAvatar`'s initials fallback already exists and becomes the only path — no bank-picker redesign needed |
 
 ---
 

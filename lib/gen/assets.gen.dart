@@ -14,11 +14,69 @@ import 'package:flutter/widgets.dart';
 class $AssetsImagesGen {
   const $AssetsImagesGen();
 
+  /// Directory path: assets/images/banks
+  $AssetsImagesBanksGen get banks => const $AssetsImagesBanksGen();
+
   /// File path: assets/images/profile.jpg
   AssetGenImage get profile => const AssetGenImage('assets/images/profile.jpg');
 
   /// List of all assets
   List<AssetGenImage> get values => [profile];
+}
+
+class $AssetsImagesBanksGen {
+  const $AssetsImagesBanksGen();
+
+  /// File path: assets/images/banks/access_bank.png
+  AssetGenImage get accessBank =>
+      const AssetGenImage('assets/images/banks/access_bank.png');
+
+  /// File path: assets/images/banks/fidelity_bank.png
+  AssetGenImage get fidelityBank =>
+      const AssetGenImage('assets/images/banks/fidelity_bank.png');
+
+  /// File path: assets/images/banks/first_bank.png
+  AssetGenImage get firstBank =>
+      const AssetGenImage('assets/images/banks/first_bank.png');
+
+  /// File path: assets/images/banks/gtbank.png
+  AssetGenImage get gtbank =>
+      const AssetGenImage('assets/images/banks/gtbank.png');
+
+  /// File path: assets/images/banks/kuda.png
+  AssetGenImage get kuda => const AssetGenImage('assets/images/banks/kuda.png');
+
+  /// File path: assets/images/banks/moniepoint.png
+  AssetGenImage get moniepoint =>
+      const AssetGenImage('assets/images/banks/moniepoint.png');
+
+  /// File path: assets/images/banks/opay.png
+  AssetGenImage get opay => const AssetGenImage('assets/images/banks/opay.png');
+
+  /// File path: assets/images/banks/uba.png
+  AssetGenImage get uba => const AssetGenImage('assets/images/banks/uba.png');
+
+  /// File path: assets/images/banks/wema_bank.png
+  AssetGenImage get wemaBank =>
+      const AssetGenImage('assets/images/banks/wema_bank.png');
+
+  /// File path: assets/images/banks/zenith_bank.png
+  AssetGenImage get zenithBank =>
+      const AssetGenImage('assets/images/banks/zenith_bank.png');
+
+  /// List of all assets
+  List<AssetGenImage> get values => [
+    accessBank,
+    fidelityBank,
+    firstBank,
+    gtbank,
+    kuda,
+    moniepoint,
+    opay,
+    uba,
+    wemaBank,
+    zenithBank,
+  ];
 }
 
 abstract final class Assets {

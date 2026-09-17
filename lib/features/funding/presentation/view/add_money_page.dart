@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:novapay/config/theme/app_theme_colors.dart';
 import 'package:novapay/core/components/amount_display.dart';
@@ -188,7 +189,7 @@ class _Done extends StatelessWidget {
       showBackButton: false,
       bottomBar: CustomButton(
         label: 'Back to wallet',
-        onPressed: () => Navigator.of(context).pop(),
+        onPressed: () => context.pop(),
       ),
       body: SingleChildScrollView(
         child: Column(

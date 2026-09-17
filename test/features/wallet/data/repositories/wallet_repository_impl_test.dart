@@ -132,6 +132,25 @@ void main() {
       expect(snapshot.activity.single.isDebit, isFalse);
     });
 
+    test('a send carrying a bank names it and masks the account', () async {
+      await sync.enqueue(
+        type: PendingActionType.send,
+        amountKobo: 500000,
+        payload: const {
+          'recipient': '0123456789',
+          'bankCode': '058',
+          'bankName': 'Guaranty Trust Bank',
+        },
+      );
+
+      final snapshot = await loaded();
+
+      expect(
+        snapshot.activity.single.title,
+        'To Guaranty Trust Bank, •••••• 6789',
+      );
+    });
+
     test('a send with no recipient in the payload still reads', () async {
       await sync.enqueue(
         type: PendingActionType.send,

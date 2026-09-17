@@ -218,7 +218,7 @@ void main() {
 
   group('ActivityRow', () {
     testWidgets('a settled row carries no chip', (tester) async {
-      await tester.pumpApp(ActivityRow(item: _item()));
+      await tester.pumpApp(ActivityRow(item: _item(), onTap: () {}));
 
       expect(find.text('To 0123456789'), findsOneWidget);
       expect(find.text('-₦5,000.00'), findsOneWidget);
@@ -227,7 +227,10 @@ void main() {
 
     testWidgets('a queued row says Pending in the word', (tester) async {
       await tester.pumpApp(
-        ActivityRow(item: _item(status: ActivityStatus.pending)),
+        ActivityRow(
+          item: _item(status: ActivityStatus.pending),
+          onTap: () {},
+        ),
       );
 
       expect(find.text('Pending'), findsOneWidget);
@@ -238,6 +241,7 @@ void main() {
         ActivityRow(
           item: _item(status: ActivityStatus.rejected)
               .copyWith(failureMessage: 'Not enough in your wallet'),
+          onTap: () {},
         ),
       );
 
@@ -247,7 +251,10 @@ void main() {
 
     testWidgets('an unknown outcome never says Failed', (tester) async {
       await tester.pumpApp(
-        ActivityRow(item: _item(status: ActivityStatus.unresolved)),
+        ActivityRow(
+          item: _item(status: ActivityStatus.unresolved),
+          onTap: () {},
+        ),
       );
 
       expect(find.text('Unresolved'), findsOneWidget);
@@ -263,7 +270,10 @@ void main() {
       tester,
     ) async {
       await tester.pumpApp(
-        ActivityRow(item: _item(amountKobo: 500000, title: 'From Ada')),
+        ActivityRow(
+          item: _item(amountKobo: 500000, title: 'From Ada'),
+          onTap: () {},
+        ),
       );
 
       expect(find.text('+₦5,000.00'), findsOneWidget);
@@ -271,7 +281,7 @@ void main() {
     });
 
     testWidgets('money leaving points up', (tester) async {
-      await tester.pumpApp(ActivityRow(item: _item()));
+      await tester.pumpApp(ActivityRow(item: _item(), onTap: () {}));
 
       expect(find.byIcon(Icons.arrow_upward), findsOneWidget);
     });
@@ -279,12 +289,21 @@ void main() {
     testWidgets('a row is at least 66 tall so it stays tappable', (
       tester,
     ) async {
-      await tester.pumpApp(ActivityRow(item: _item()));
+      await tester.pumpApp(ActivityRow(item: _item(), onTap: () {}));
 
       expect(
         tester.getSize(find.byType(ActivityRow)).height,
         greaterThanOrEqualTo(66),
       );
+    });
+
+    testWidgets('tapping the row fires its callback', (tester) async {
+      var taps = 0;
+      await tester.pumpApp(ActivityRow(item: _item(), onTap: () => taps++));
+
+      await tester.tap(find.byType(ActivityRow));
+
+      expect(taps, 1);
     });
   });
 

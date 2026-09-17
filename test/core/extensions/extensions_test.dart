@@ -102,5 +102,14 @@ void main() {
       expect(now.add(const Duration(days: 3)).daysFromNow, 3);
       expect(now.subtract(const Duration(days: 2)).daysFromNow, -2);
     });
+
+    test('greets by the hour, not by whatever hour the suite runs at', () {
+      expect(DateTime(2026, 9, 16, 6).greeting, 'Good morning');
+      expect(DateTime(2026, 9, 16, 11, 59).greeting, 'Good morning');
+      expect(DateTime(2026, 9, 16, 12).greeting, 'Good afternoon');
+      expect(DateTime(2026, 9, 16, 16, 59).greeting, 'Good afternoon');
+      expect(DateTime(2026, 9, 16, 17).greeting, 'Good evening');
+      expect(DateTime(2026, 9, 16, 23).greeting, 'Good evening');
+    });
   });
 }

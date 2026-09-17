@@ -9,6 +9,7 @@ import 'package:novapay/features/wallet/domain/entities/activity_item.dart';
 import 'package:novapay/features/wallet/domain/entities/wallet_snapshot.dart';
 import 'package:novapay/features/wallet/presentation/cubit/wallet_cubit.dart';
 import 'package:novapay/features/wallet/presentation/view/activity_page.dart';
+import 'package:novapay/features/wallet/presentation/view/transaction_detail_page.dart';
 import 'package:novapay/features/wallet/presentation/widgets/wallet_widgets.dart';
 
 import '../../../../helpers/helpers.dart';
@@ -91,6 +92,24 @@ void main() {
       tester.widget<ActivityRow>(find.byType(ActivityRow).first).key,
       const ValueKey('a'),
     );
+  });
+
+  testWidgets('tapping a row opens its transaction detail', (tester) async {
+    await pumpView(
+      tester,
+      WalletState.ready(
+        WalletSnapshot(
+          confirmedKobo: 24800000,
+          pendingKobo: 0,
+          activity: [_item('a')],
+        ),
+      ),
+    );
+
+    await tester.tap(find.byType(ActivityRow));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(TransactionDetailPage), findsOneWidget);
   });
 
   testWidgets('pulling down asks for a reload', (tester) async {

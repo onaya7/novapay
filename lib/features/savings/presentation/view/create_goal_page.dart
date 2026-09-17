@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:novapay/config/theme/app_theme_colors.dart';
 import 'package:novapay/core/components/custom_button.dart';
@@ -29,7 +30,7 @@ class CreateGoalView extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocListener<CreateGoalCubit, CreateGoalState>(
       listenWhen: (previous, current) => current is CreateGoalDone,
-      listener: (context, state) => Navigator.of(context).pop(),
+      listener: (context, state) => context.pop(),
       child: BlocBuilder<CreateGoalCubit, CreateGoalState>(
         builder: (context, state) {
           final cubit = context.read<CreateGoalCubit>();

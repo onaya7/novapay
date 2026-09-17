@@ -1,16 +1,20 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novapay/core/money/money.dart';
+import 'package:novapay/features/send_money/domain/entities/bank.dart';
 import 'package:novapay/features/send_money/domain/entities/transfer_draft.dart';
 import 'package:novapay/features/send_money/domain/entities/transfer_receipt.dart';
 
 const _available = Money.fromKobo(2000000);
+const _bank = Bank(code: '058', name: 'Guaranty Trust Bank');
 
 TransferDraft _draft({
   SendStep step = SendStep.recipient,
+  Bank? bank = _bank,
   String recipient = '0123456789',
   int amountKobo = 500000,
 }) => TransferDraft(
   step: step,
+  bank: bank,
   recipient: recipient,
   amount: Money.fromKobo(amountKobo),
   available: _available,
@@ -34,6 +38,10 @@ void main() {
       expect(_draft(recipient: '01234567890').recipientIsValid, isFalse);
       expect(_draft(recipient: '012345678a').recipientIsValid, isFalse);
       expect(_draft().recipientIsValid, isTrue);
+    });
+
+    test('a valid account number is not enough without a bank', () {
+      expect(_draft(bank: null).recipientIsValid, isFalse);
     });
 
     test('zero is not an amount', () {
@@ -90,6 +98,7 @@ void main() {
     test('unsettled is pending, because the app cannot know', () {
       const receipt = TransferReceipt(
         reference: 'r1',
+        bankName: 'Guaranty Trust Bank',
         recipient: '0123456789',
         amount: Money.fromKobo(500000),
         settled: false,
@@ -101,6 +110,7 @@ void main() {
     test('settled is not pending', () {
       const receipt = TransferReceipt(
         reference: 'r1',
+        bankName: 'Guaranty Trust Bank',
         recipient: '0123456789',
         amount: Money.fromKobo(500000),
         settled: true,

@@ -8,6 +8,7 @@ part 'transfer_receipt.freezed.dart';
 abstract class TransferReceipt with _$TransferReceipt {
   const factory TransferReceipt({
     required String reference,
+    required String bankName,
     required String recipient,
     required Money amount,
     required bool settled,

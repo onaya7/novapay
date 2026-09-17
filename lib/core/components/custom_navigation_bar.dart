@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:novapay/config/theme/app_theme_colors.dart';
 import 'package:novapay/core/constants/app_color.dart';
@@ -13,7 +15,8 @@ class NavigationTab {
 }
 
 /// The bar, with the selected destination lifted out of it on a circle and the
-/// bar notched around it.
+/// bar notched around it. Translucent and blurred, so scrolling content is
+/// visible passing behind it rather than vanishing under a solid block.
 class CustomNavigationBar extends StatelessWidget {
   const new({
     required this.tabs,
@@ -31,14 +34,18 @@ class CustomNavigationBar extends StatelessWidget {
   static const double barHeight = 64;
   static const double circle = 52;
 
+  /// How much bottom space the bar actually occupies, for anything scrolling
+  /// behind it to clear — the same arithmetic this widget lays itself out
+  /// with, defined once so a list's padding can never drift from it.
+  static double reservedHeight(BuildContext context) =>
+      barHeight + lift + AppSize.smd + MediaQuery.paddingOf(context).bottom;
+
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
 
     return SafeArea(
       top: false,
-      // The circle is drawn outside the bar's own box, so the padding has to
-      // leave room for it or SafeArea clips the lift away.
       child: Padding(
         padding: const EdgeInsets.fromLTRB(
           AppSize.md,
@@ -152,6 +159,8 @@ class _Destination extends StatelessWidget {
   }
 }
 
+/// The blurred, tinted fill behind the crisp border and the raised circle —
+/// sharp icons over a frosted band, the same shape as WhatsApp's tab bar.
 class _NotchedBar extends StatelessWidget {
   const _NotchedBar({
     required this.color,
@@ -174,59 +183,80 @@ class _NotchedBar extends StatelessWidget {
       tween: Tween<double>(end: notchCentre),
       duration: const Duration(milliseconds: 260),
       curve: Curves.easeOut,
-      builder: (context, centre, _) => CustomPaint(
-        size: Size(double.infinity, height),
-        painter: _NotchPainter(
-          color: color,
-          border: border,
-          centre: centre,
-          radius: radius,
+      builder: (context, centre, _) => SizedBox(
+        width: double.infinity,
+        height: height,
+        child: Stack(
+          children: [
+            ClipPath(
+              clipper: _NotchClipper(centre: centre, radius: radius),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+                child: ColoredBox(color: color.withValues(alpha: 0.72)),
+              ),
+            ),
+            CustomPaint(
+              size: Size(double.infinity, height),
+              painter: _NotchPainter(
+                border: border,
+                centre: centre,
+                radius: radius,
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
+/// The concave cut the raised circle sits in, minus a rounded-rect body.
+Path _notchPath(Size size, double centre, double radius) {
+  const corner = Radius.circular(AppSize.radiusXl);
+  final body = Path()
+    ..addRRect(RRect.fromRectAndRadius(Offset.zero & size, corner));
+  final cut = Path()
+    ..addOval(Rect.fromCircle(center: Offset(centre, 0), radius: radius));
+  return Path.combine(PathOperation.difference, body, cut);
+}
+
+class _NotchClipper extends CustomClipper<Path> {
+  const _NotchClipper({required this.centre, required this.radius});
+
+  final double centre;
+  final double radius;
+
+  @override
+  Path getClip(Size size) => _notchPath(size, centre, radius);
+
+  @override
+  bool shouldReclip(_NotchClipper old) =>
+      old.centre != centre || old.radius != radius;
+}
+
 class _NotchPainter extends CustomPainter {
   const _NotchPainter({
-    required this.color,
     required this.border,
     required this.centre,
     required this.radius,
   });
 
-  final Color color;
   final Color border;
   final double centre;
   final double radius;
 
   @override
   void paint(Canvas canvas, Size size) {
-    const corner = Radius.circular(AppSize.radiusXl);
-    final body = Path()
-      ..addRRect(RRect.fromRectAndRadius(Offset.zero & size, corner));
-
-    // The concave cut the raised circle sits in.
-    final cut = Path()
-      ..addOval(Rect.fromCircle(center: Offset(centre, 0), radius: radius));
-
-    final shape = Path.combine(PathOperation.difference, body, cut);
-
-    canvas
-      ..drawPath(shape, Paint()..color = color)
-      ..drawPath(
-        shape,
-        Paint()
-          ..color = border
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1,
-      );
+    canvas.drawPath(
+      _notchPath(size, centre, radius),
+      Paint()
+        ..color = border
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1,
+    );
   }
 
   @override
   bool shouldRepaint(_NotchPainter old) =>
-      old.centre != centre ||
-      old.color != color ||
-      old.border != border ||
-      old.radius != radius;
+      old.centre != centre || old.border != border || old.radius != radius;
 }

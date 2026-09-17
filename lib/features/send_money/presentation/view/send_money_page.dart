@@ -1,12 +1,13 @@
 import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:novapay/app/routes/routes_name.dart';
 import 'package:novapay/core/components/custom_button.dart';
 import 'package:novapay/core/components/custom_scaffold.dart';
 import 'package:novapay/core/constants/app_size.dart';
 import 'package:novapay/core/injections/injection.dart';
-import 'package:novapay/features/funding/presentation/view/add_money_page.dart';
 import 'package:novapay/features/send_money/domain/entities/transfer_draft.dart';
 import 'package:novapay/features/send_money/presentation/cubit/send_money_cubit.dart';
 import 'package:novapay/features/send_money/presentation/widgets/send_money_widgets.dart';
@@ -69,7 +70,7 @@ class _StepScaffold extends StatelessWidget {
         title: title,
         onBackPressed: () {
           if (draft.previousStep == null) {
-            Navigator.of(context).pop();
+            context.pop();
           } else {
             cubit.back();
           }
@@ -80,6 +81,8 @@ class _StepScaffold extends StatelessWidget {
           child: switch (draft.step) {
             SendStep.recipient => RecipientStep(
               draft: draft,
+              banks: state.banks,
+              onBankChanged: cubit.bankChanged,
               onChanged: cubit.recipientChanged,
             ),
             SendStep.amount => AmountStep(
@@ -126,9 +129,7 @@ class _StepCta extends StatelessWidget {
           CustomButton(
             label: 'Cancel',
             variant: ButtonVariant.text,
-            onPressed: state.isSubmitting
-                ? null
-                : () => Navigator.of(context).pop(),
+            onPressed: state.isSubmitting ? null : () => context.pop(),
           ),
         ],
       );
@@ -141,8 +142,7 @@ class _StepCta extends StatelessWidget {
   }
 
   void _openAddMoney(BuildContext context) {
-    Navigator.of(context)
-        .push(MaterialPageRoute<void>(builder: (_) => const AddMoneyPage()));
+    unawaited(context.pushNamed(RoutesName.addMoney));
   }
 }
 
@@ -158,7 +158,7 @@ class _DoneScaffold extends StatelessWidget {
       title: state.receipt.isPending ? 'Queued' : 'Sent',
       bottomBar: CustomButton(
         label: 'Back to wallet',
-        onPressed: () => Navigator.of(context).pop(),
+        onPressed: () => context.pop(),
       ),
       body: SingleChildScrollView(child: ReceiptStep(receipt: state.receipt)),
     );

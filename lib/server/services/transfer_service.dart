@@ -14,6 +14,7 @@ abstract class TransferService {
     required String idempotencyKey,
     required String recipient,
     required int amountKobo,
+    String? bankName,
   });
 }
 
@@ -39,6 +40,7 @@ class TransferServiceImpl implements TransferService {
     required String idempotencyKey,
     required String recipient,
     required int amountKobo,
+    String? bankName,
   }) async {
     if (_idempotency.hasSeen(idempotencyKey)) {
       final existing = _transactions.findById(idempotencyKey);
@@ -56,7 +58,9 @@ class TransferServiceImpl implements TransferService {
 
     final transaction = Transaction(
       id: idempotencyKey,
-      title: 'Transfer to $recipient',
+      title: bankName == null
+          ? 'Transfer to $recipient'
+          : 'Transfer to $bankName',
       amountKobo: -amountKobo,
       occurredAt: _clock.now(),
     );

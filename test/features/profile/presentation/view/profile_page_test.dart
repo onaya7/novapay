@@ -109,4 +109,23 @@ void main() {
 
     verify(() => theme.setMode(AppThemeMode.dark)).called(1);
   });
+
+  testWidgets('ProfilePage renders the view', (tester) async {
+    whenListen(
+      profile,
+      const Stream<ProfileState>.empty(),
+      initialState: const ProfileState.loading(),
+    );
+    await tester.pumpApp(
+      MultiBlocProvider(
+        providers: [
+          BlocProvider<ProfileCubit>.value(value: profile),
+          BlocProvider<ThemeCubit>.value(value: theme),
+        ],
+        child: const ProfilePage(),
+      ),
+    );
+
+    expect(find.byType(ProfileView), findsOneWidget);
+  });
 }

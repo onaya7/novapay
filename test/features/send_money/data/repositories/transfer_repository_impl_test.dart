@@ -39,6 +39,8 @@ void main() {
 
   Future<TransferReceipt> send(Money amount) async {
     final result = await repository.queue(
+      bankCode: '058',
+      bankName: 'Guaranty Trust Bank',
       recipient: '0123456789',
       amount: amount,
     );
@@ -150,6 +152,8 @@ void main() {
       await send(const Money.fromKobo(20000000));
 
       final result = await repository.queue(
+        bankCode: '058',
+        bankName: 'Guaranty Trust Bank',
         recipient: '0123456789',
         amount: const Money.fromKobo(20000000),
       );
@@ -172,6 +176,8 @@ void main() {
         await send(half);
         await send(half);
         final third = await repository.queue(
+          bankCode: '058',
+          bankName: 'Guaranty Trust Bank',
           recipient: '0123456789',
           amount: half,
         );

@@ -6,12 +6,14 @@ money out of the wallet and into it, and the bar shows how far along it is.
 
 ## Entry screens
 - `SavingsPage` (`presentation/view/savings_page.dart`) — the list, one of the four tabs behind
-  `AppShell`'s bottom nav. The wallet's `Save` quick action switches to this tab via `NavCubit`
-  rather than pushing a second copy.
-- `CreateGoalPage` — name, target, date.
-- `ContributePage` — the amount, pushed from a goal card.
+  `AppShell`'s bottom nav. The wallet's `Save` quick action switches to this tab
+  (`context.goNamed(RoutesName.savings)`) rather than pushing a second copy.
+- `CreateGoalPage` — name, target, date. Reached via `context.pushNamed(RoutesName.createGoal)`.
+- `ContributePage` — the amount, pushed from a goal card via
+  `context.pushNamed(RoutesName.contribute, extra: goal)` — the goal travels as router `extra`,
+  since it isn't part of the path.
 
-Both sub-screens are pushed from `SavingsPage`, which refreshes when they pop.
+Both sub-screens are pushed from `SavingsPage`, which `await`s the push and refreshes once it pops.
 
 ## Endpoints
 Through `NovaPayApi`:
@@ -60,3 +62,7 @@ None is paginated.
   blocks it again in case the balance moved.
 - `GoalDateField` passes an explicit `lastDate`. The picker's default is today, which would block
   every valid choice for a goal that is by definition in the future.
+- **The pinned `Create goal` button is padded by `CustomNavigationBar.reservedHeight(context)`**,
+  not left at `CustomScaffold`'s default — this is the one *fixed* element behind the shell (every
+  other tab's bottom padding fix is on a scrolling list), so it needs lifting above the translucent
+  bar explicitly rather than via a list's padding. See `.claude/rules/ui-conventions.md`.

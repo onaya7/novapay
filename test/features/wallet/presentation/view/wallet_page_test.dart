@@ -3,19 +3,22 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:novapay/app/presentation/cubit/nav_cubit.dart';
 import 'package:novapay/core/components/state_widgets.dart';
 import 'package:novapay/core/injections/injection.dart';
 import 'package:novapay/features/funding/domain/entities/funding_draft.dart';
 import 'package:novapay/features/funding/presentation/cubit/add_money_cubit.dart';
 import 'package:novapay/features/funding/presentation/view/add_money_page.dart';
 import 'package:novapay/features/profile/presentation/cubit/profile_cubit.dart';
+import 'package:novapay/features/savings/presentation/cubit/savings_cubit.dart';
+import 'package:novapay/features/savings/presentation/view/savings_page.dart';
 import 'package:novapay/features/send_money/domain/entities/transfer_draft.dart';
 import 'package:novapay/features/send_money/presentation/cubit/send_money_cubit.dart';
 import 'package:novapay/features/send_money/presentation/view/send_money_page.dart';
 import 'package:novapay/features/wallet/domain/entities/activity_item.dart';
 import 'package:novapay/features/wallet/domain/entities/wallet_snapshot.dart';
 import 'package:novapay/features/wallet/presentation/cubit/wallet_cubit.dart';
+import 'package:novapay/features/wallet/presentation/view/activity_page.dart';
+import 'package:novapay/features/wallet/presentation/view/transaction_detail_page.dart';
 import 'package:novapay/features/wallet/presentation/view/wallet_page.dart';
 import 'package:novapay/features/wallet/presentation/widgets/wallet_widgets.dart';
 
@@ -31,6 +34,8 @@ class _MockProfileCubit extends MockCubit<ProfileState> implements ProfileCubit;
 class _MockAddMoneyCubit extends MockCubit<AddMoneyState>
     implements AddMoneyCubit;
 
+class _MockSavingsCubit extends MockCubit<SavingsState> implements SavingsCubit;
+
 ActivityItem _item(String id) => ActivityItem(
   id: id,
   title: 'To $id',
@@ -42,7 +47,6 @@ ActivityItem _item(String id) => ActivityItem(
 void main() {
   late _MockWalletCubit cubit;
   late _MockProfileCubit profile;
-  late NavCubit nav;
 
   Future<void> pumpView(WidgetTester tester, WalletState state) {
     whenListen(cubit, const Stream<WalletState>.empty(), initialState: state);
@@ -51,7 +55,6 @@ void main() {
         providers: [
           BlocProvider<WalletCubit>.value(value: cubit),
           BlocProvider<ProfileCubit>.value(value: profile),
-          BlocProvider<NavCubit>.value(value: nav),
         ],
         child: const WalletView(),
       ),
@@ -67,8 +70,6 @@ void main() {
       const Stream<ProfileState>.empty(),
       initialState: const ProfileState.loading(),
     );
-    nav = NavCubit();
-    addTearDown(nav.close);
   });
 
   testWidgets('the wallet is a root screen, so it offers no back', (
@@ -143,7 +144,31 @@ void main() {
     );
   });
 
+  testWidgets('tapping an activity row opens its transaction detail', (
+    tester,
+  ) async {
+    await pumpView(
+      tester,
+      WalletState.ready(
+        WalletSnapshot(
+          confirmedKobo: 24800000,
+          pendingKobo: 0,
+          activity: [_item('a')],
+        ),
+      ),
+    );
+
+    await tester.tap(find.byType(ActivityRow));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(TransactionDetailPage), findsOneWidget);
+  });
+
   testWidgets('See all switches to the Activity tab', (tester) async {
+    sl.registerFactory<WalletCubit>(() => cubit);
+    addTearDown(sl.reset);
+    when(cubit.start).thenAnswer((_) async {});
+
     await pumpView(
       tester,
       WalletState.ready(
@@ -156,8 +181,9 @@ void main() {
     );
 
     await tester.tap(find.text('See all'));
+    await tester.pumpAndSettle();
 
-    expect(nav.state, 2);
+    expect(find.byType(ActivityView), findsOneWidget);
   });
 
   testWidgets('Add money opens the funding flow', (tester) async {
@@ -209,6 +235,16 @@ void main() {
   });
 
   testWidgets('Save switches to the Savings tab', (tester) async {
+    final savings = _MockSavingsCubit();
+    when(savings.start).thenAnswer((_) async {});
+    whenListen(
+      savings,
+      const Stream<SavingsState>.empty(),
+      initialState: const SavingsState.loading(),
+    );
+    sl.registerFactory<SavingsCubit>(() => savings);
+    addTearDown(sl.reset);
+
     await pumpView(
       tester,
       const WalletState.ready(
@@ -217,11 +253,16 @@ void main() {
     );
 
     await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
 
-    expect(nav.state, 1);
+    expect(find.byType(SavingsView), findsOneWidget);
   });
 
   testWidgets('History switches to the Activity tab', (tester) async {
+    sl.registerFactory<WalletCubit>(() => cubit);
+    addTearDown(sl.reset);
+    when(cubit.start).thenAnswer((_) async {});
+
     await pumpView(
       tester,
       const WalletState.ready(
@@ -230,8 +271,9 @@ void main() {
     );
 
     await tester.tap(find.text('History'));
+    await tester.pumpAndSettle();
 
-    expect(nav.state, 2);
+    expect(find.byType(ActivityView), findsOneWidget);
   });
 
   testWidgets('pulling down asks for a reload', (tester) async {
@@ -265,10 +307,7 @@ void main() {
     testWidgets('resolves its cubit and starts it', (tester) async {
       await tester.pumpApp(
         MultiBlocProvider(
-          providers: [
-            BlocProvider<ProfileCubit>.value(value: profile),
-            BlocProvider<NavCubit>.value(value: nav),
-          ],
+          providers: [BlocProvider<ProfileCubit>.value(value: profile)],
           child: const WalletPage(),
         ),
       );

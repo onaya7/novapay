@@ -251,62 +251,71 @@ class WalletActions extends StatelessWidget {
 
 /// One activity row. Only unsettled rows carry a chip.
 class ActivityRow extends StatelessWidget {
-  const new({required this.item, super.key});
+  const new({required this.item, required this.onTap, super.key});
 
   final ActivityItem item;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
     final texts = Theme.of(context).textTheme;
 
-    return Container(
-      constraints: const BoxConstraints(minHeight: AppSize.rowMinHeight),
-      padding: const EdgeInsets.all(AppSize.smd),
-      decoration: BoxDecoration(
-        color: colors.cards,
+    return Material(
+      color: colors.cards,
+      borderRadius: BorderRadius.circular(AppSize.radiusLg),
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(AppSize.radiusLg),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _Avatar(item: item),
-          AppSize.w(AppSize.smd),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(item.title, style: texts.labelLarge),
-                AppSize.h(AppSize.xs),
-                Text(
-                  '${item.occurredAt.dayLabel} · ${item.occurredAt.timeLabel}',
-                  style: texts.bodySmall?.copyWith(color: colors.subtext),
-                ),
-                if (_chipFor(item.status) case (final label, final tone)) ...[
-                  AppSize.h(AppSize.sm),
-                  StatusChip(label: label, tone: tone),
-                ],
-                if (item.note case final note?) ...[
-                  AppSize.h(AppSize.sm),
-                  Text(
-                    note,
-                    style: texts.bodySmall?.copyWith(
-                      color: colors.textSubheading,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: AppSize.rowMinHeight),
+          padding: const EdgeInsets.all(AppSize.smd),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _Avatar(item: item),
+              AppSize.w(AppSize.smd),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(item.title, style: texts.labelLarge),
+                    AppSize.h(AppSize.xs),
+                    Text(
+                      '${item.occurredAt.dayLabel} · '
+                      '${item.occurredAt.timeLabel}',
+                      style: texts.bodySmall?.copyWith(color: colors.subtext),
                     ),
-                  ),
-                ],
-              ],
-            ),
+                    if (_chipFor(item.status) case (
+                      final label,
+                      final tone,
+                    )) ...[
+                      AppSize.h(AppSize.sm),
+                      StatusChip(label: label, tone: tone),
+                    ],
+                    if (item.note case final note?) ...[
+                      AppSize.h(AppSize.sm),
+                      Text(
+                        note,
+                        style: texts.bodySmall?.copyWith(
+                          color: colors.textSubheading,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              AppSize.w(AppSize.sm),
+              MoneyText(
+                amount: item.amount,
+                signed: true,
+                style: texts.labelLarge?.copyWith(
+                  color: item.isDebit ? colors.textHeading : AppColor.success,
+                ),
+              ),
+            ],
           ),
-          AppSize.w(AppSize.sm),
-          MoneyText(
-            amount: item.amount,
-            signed: true,
-            style: texts.labelLarge?.copyWith(
-              color: item.isDebit ? colors.textHeading : AppColor.success,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

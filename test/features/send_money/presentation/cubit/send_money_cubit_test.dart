@@ -4,20 +4,26 @@ import 'package:mocktail/mocktail.dart';
 import 'package:novapay/core/error/failure.dart';
 import 'package:novapay/core/money/money.dart';
 import 'package:novapay/core/usecase/usecase.dart';
+import 'package:novapay/features/send_money/domain/entities/bank.dart';
 import 'package:novapay/features/send_money/domain/entities/transfer_draft.dart';
 import 'package:novapay/features/send_money/domain/entities/transfer_receipt.dart';
 import 'package:novapay/features/send_money/domain/usecases/load_available.dart';
+import 'package:novapay/features/send_money/domain/usecases/load_banks.dart';
 import 'package:novapay/features/send_money/domain/usecases/queue_transfer.dart';
 import 'package:novapay/features/send_money/presentation/cubit/send_money_cubit.dart';
 
 class _MockLoadAvailable extends Mock implements LoadAvailable;
 
+class _MockLoadBanks extends Mock implements LoadBanks;
+
 class _MockQueueTransfer extends Mock implements QueueTransfer;
 
 const _available = Money.fromKobo(2000000);
+const _bank = Bank(code: '058', name: 'Guaranty Trust Bank');
 
 const _receipt = TransferReceipt(
   reference: 'r1',
+  bankName: 'Guaranty Trust Bank',
   recipient: '0123456789',
   amount: Money.fromKobo(500000),
   settled: true,
@@ -25,29 +31,40 @@ const _receipt = TransferReceipt(
 
 void main() {
   late _MockLoadAvailable loadAvailable;
+  late _MockLoadBanks loadBanks;
   late _MockQueueTransfer queueTransfer;
 
   setUpAll(() {
     registerFallbackValue(
-      const TransferParams(recipient: '', amount: Money.zero),
+      const TransferParams(
+        bankCode: '',
+        bankName: '',
+        recipient: '',
+        amount: Money.zero,
+      ),
     );
   });
 
   setUp(() {
     loadAvailable = _MockLoadAvailable();
+    loadBanks = _MockLoadBanks();
     queueTransfer = _MockQueueTransfer();
     when(() => loadAvailable(const NoParams()))
         .thenAnswer((_) async => const Right(_available));
+    when(() => loadBanks(const NoParams()))
+        .thenAnswer((_) async => const Right([_bank]));
     when(() => queueTransfer(any()))
         .thenAnswer((_) async => const Right(_receipt));
   });
 
-  SendMoneyCubit build() => SendMoneyCubit(loadAvailable, queueTransfer);
+  SendMoneyCubit build() =>
+      SendMoneyCubit(loadAvailable, loadBanks, queueTransfer);
 
   Future<SendMoneyCubit> atConfirm() async {
     final cubit = build();
     await cubit.start();
     cubit
+      ..bankChanged(_bank)
       ..recipientChanged('0123456789')
       ..next()
       ..amountChanged('5000')
@@ -59,12 +76,13 @@ void main() {
     expect(build().state, const SendMoneyState.editing(TransferDraft()));
   });
 
-  test('start brings in what may be spent', () async {
+  test('start brings in what may be spent, and the bank list', () async {
     final cubit = build();
 
     await cubit.start();
 
     expect(cubit.state.draft.available, _available);
+    expect(cubit.state.banks, [_bank]);
   });
 
   test('a failed balance read is shown but does not block typing', () async {
@@ -84,11 +102,25 @@ void main() {
     );
   });
 
+  test('a bank is kept once chosen', () async {
+    final cubit = build()..bankChanged(_bank);
+
+    expect(cubit.state.draft.bank, _bank);
+  });
+
   test('a recipient is trimmed on the way in', () async {
-    final cubit = build()..recipientChanged('  0123456789  ');
+    final cubit = build()
+      ..bankChanged(_bank)
+      ..recipientChanged('  0123456789  ');
 
     expect(cubit.state.draft.recipient, '0123456789');
     expect(cubit.state.draft.recipientIsValid, isTrue);
+  });
+
+  test('a recipient without a bank is not valid', () async {
+    final cubit = build()..recipientChanged('0123456789');
+
+    expect(cubit.state.draft.recipientIsValid, isFalse);
   });
 
   test('an amount is parsed through Money, never a double', () async {
@@ -145,20 +177,25 @@ void main() {
     await subscription.cancel();
   });
 
-  test('submit sends the amount and recipient that were entered', () async {
-    final cubit = await atConfirm();
+  test(
+    'submit sends the bank, amount and recipient that were entered',
+    () async {
+      final cubit = await atConfirm();
 
-    await cubit.submit();
+      await cubit.submit();
 
-    verify(
-      () => queueTransfer(
-        const TransferParams(
-          recipient: '0123456789',
-          amount: Money.fromKobo(500000),
+      verify(
+        () => queueTransfer(
+          const TransferParams(
+            bankCode: '058',
+            bankName: 'Guaranty Trust Bank',
+            recipient: '0123456789',
+            amount: Money.fromKobo(500000),
+          ),
         ),
-      ),
-    ).called(1);
-  });
+      ).called(1);
+    },
+  );
 
   test('a refusal returns to editing with copy, keeping the draft', () async {
     when(() => queueTransfer(any())).thenAnswer(

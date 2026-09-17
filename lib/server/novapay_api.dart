@@ -28,6 +28,7 @@ abstract class NovaPayApi {
     required String idempotencyKey,
     required String recipient,
     required int amountKobo,
+    String? bankName,
   });
 
   Future<ApiResponse<Transaction>> fund({
@@ -144,11 +145,13 @@ class NovaPayApiImpl implements NovaPayApi {
     required String idempotencyKey,
     required String recipient,
     required int amountKobo,
+    String? bankName,
   }) => _handle(
     () => _transfers.execute(
       idempotencyKey: idempotencyKey,
       recipient: recipient,
       amountKobo: amountKobo,
+      bankName: bankName,
     ),
     successCode: 201,
   );

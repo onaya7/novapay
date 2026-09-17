@@ -8,13 +8,20 @@ import 'package:novapay/features/send_money/domain/entities/transfer_receipt.dar
 import 'package:novapay/features/send_money/domain/repositories/transfer_repository.dart';
 
 class TransferParams extends Equatable {
-  const TransferParams({required this.recipient, required this.amount});
+  const TransferParams({
+    required this.bankCode,
+    required this.bankName,
+    required this.recipient,
+    required this.amount,
+  });
 
+  final String bankCode;
+  final String bankName;
   final String recipient;
   final Money amount;
 
   @override
-  List<Object?> get props => [recipient, amount];
+  List<Object?> get props => [bankCode, bankName, recipient, amount];
 }
 
 @lazySingleton
@@ -25,5 +32,10 @@ class QueueTransfer implements UseCase<TransferReceipt, TransferParams> {
 
   @override
   Future<Either<Failure, TransferReceipt>> call(TransferParams params) =>
-      _repository.queue(recipient: params.recipient, amount: params.amount);
+      _repository.queue(
+        bankCode: params.bankCode,
+        bankName: params.bankName,
+        recipient: params.recipient,
+        amount: params.amount,
+      );
 }

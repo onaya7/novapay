@@ -3,14 +3,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:novapay/app/app.dart';
-import 'package:novapay/app/presentation/cubit/nav_cubit.dart';
 import 'package:novapay/app/presentation/cubit/theme_cubit.dart';
 import 'package:novapay/config/theme/app_theme.dart';
 import 'package:novapay/config/theme/app_theme_colors.dart';
 import 'package:novapay/core/injections/injection.dart';
 import 'package:novapay/features/profile/presentation/cubit/profile_cubit.dart';
+import 'package:novapay/features/profile/presentation/view/profile_page.dart';
 import 'package:novapay/features/savings/presentation/cubit/savings_cubit.dart';
+import 'package:novapay/features/savings/presentation/view/savings_page.dart';
 import 'package:novapay/features/wallet/presentation/cubit/wallet_cubit.dart';
+import 'package:novapay/features/wallet/presentation/view/activity_page.dart';
 import 'package:novapay/features/wallet/presentation/view/wallet_page.dart';
 
 class _MockWalletCubit extends MockCubit<WalletState> implements WalletCubit;
@@ -59,8 +61,6 @@ void main() {
       initialState: const ProfileState.loading(),
     );
     sl.registerFactory<ProfileCubit>(() => profile);
-
-    sl.registerFactory<NavCubit>(NavCubit.new);
   });
 
   tearDown(sl.reset);
@@ -71,6 +71,28 @@ void main() {
       // ignore: prefer_const_constructors
       await tester.pumpWidget(App());
 
+      expect(find.byType(WalletPage), findsOneWidget);
+    });
+
+    testWidgets('every tab is reachable from the nav bar', (tester) async {
+      // Every tab starts loading, and loading is a spinner that never stops
+      // animating, so this pumps rather than settling.
+      await tester.pumpWidget(const App());
+
+      await tester.tap(find.text('Savings'));
+      await tester.pump();
+      expect(find.byType(SavingsPage), findsOneWidget);
+
+      await tester.tap(find.text('Activity'));
+      await tester.pump();
+      expect(find.byType(ActivityPage), findsOneWidget);
+
+      await tester.tap(find.text('Profile'));
+      await tester.pump();
+      expect(find.byType(ProfilePage), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.account_balance_wallet_outlined));
+      await tester.pump();
       expect(find.byType(WalletPage), findsOneWidget);
     });
 

@@ -8,31 +8,122 @@ import 'package:novapay/core/constants/app_color.dart';
 import 'package:novapay/core/constants/app_size.dart';
 import 'package:novapay/core/extensions/string_extension.dart';
 import 'package:novapay/core/money/money.dart';
+import 'package:novapay/features/send_money/domain/entities/bank.dart';
 import 'package:novapay/features/send_money/domain/entities/transfer_draft.dart';
 import 'package:novapay/features/send_money/domain/entities/transfer_receipt.dart';
+import 'package:novapay/features/send_money/presentation/widgets/bank_avatar.dart';
+import 'package:novapay/features/send_money/presentation/widgets/bank_picker_sheet.dart';
 
-/// Step one: who the money is going to.
+/// Step one: which bank, then who the money is going to.
 class RecipientStep extends StatelessWidget {
-  const new({required this.draft, required this.onChanged, super.key});
+  const new({
+    required this.draft,
+    required this.banks,
+    required this.onBankChanged,
+    required this.onChanged,
+    super.key,
+  });
 
   final TransferDraft draft;
+  final List<Bank> banks;
+  final ValueChanged<Bank> onBankChanged;
   final ValueChanged<String> onChanged;
 
   @override
   Widget build(BuildContext context) {
     final showError = draft.recipient.isNotEmpty && !draft.recipientIsValid;
-    return CustomInputField(
-      label: 'Account number',
-      hint: '0123456789',
-      helper: 'A ten-digit NUBAN account number',
-      errorText: showError ? 'That is not a ten-digit account number' : null,
-      keyboardType: TextInputType.number,
-      inputFormatters: [
-        FilteringTextInputFormatter.digitsOnly,
-        LengthLimitingTextInputFormatter(10),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _BankSelector(bank: draft.bank, onTap: () => _pickBank(context)),
+        AppSize.h(AppSize.mdl),
+        CustomInputField(
+          label: 'Account number',
+          hint: '0123456789',
+          helper: 'A ten-digit NUBAN account number',
+          errorText: showError
+              ? 'That is not a ten-digit account number'
+              : null,
+          keyboardType: TextInputType.number,
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            LengthLimitingTextInputFormatter(10),
+          ],
+          onChanged: onChanged,
+        ),
       ],
-      autofocus: true,
-      onChanged: onChanged,
+    );
+  }
+
+  Future<void> _pickBank(BuildContext context) async {
+    final chosen = await showModalBottomSheet<Bank>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppSize.radiusXl),
+        ),
+      ),
+      builder: (_) => BankPickerSheet(banks: banks),
+    );
+    if (chosen != null) onBankChanged(chosen);
+  }
+}
+
+class _BankSelector extends StatelessWidget {
+  const _BankSelector({required this.bank, required this.onTap});
+
+  final Bank? bank;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final texts = Theme.of(context).textTheme;
+    final chosen = bank;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Bank',
+          style: texts.labelLarge?.copyWith(color: colors.textSubheading),
+        ),
+        AppSize.h(AppSize.sm),
+        Material(
+          color: colors.fill,
+          borderRadius: BorderRadius.circular(AppSize.radiusMd),
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(AppSize.radiusMd),
+            child: Container(
+              constraints: const BoxConstraints(minHeight: AppSize.touchTarget),
+              padding: const EdgeInsets.symmetric(horizontal: AppSize.md),
+              child: Row(
+                children: [
+                  if (chosen != null) ...[
+                    BankAvatar(bank: chosen, size: 28),
+                    AppSize.w(AppSize.sm),
+                  ],
+                  Expanded(
+                    child: Text(
+                      chosen?.name ?? 'Choose a bank',
+                      style: texts.bodyLarge?.copyWith(
+                        color: chosen == null ? colors.subtext : null,
+                      ),
+                    ),
+                  ),
+                  Icon(
+                    Icons.keyboard_arrow_down,
+                    size: AppSize.iconMd,
+                    color: colors.subtext,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -148,6 +239,7 @@ class ConfirmStep extends StatelessWidget {
         AppSize.h(AppSize.md),
         SummaryCard(
           children: [
+            SummaryRow(label: 'Bank', value: draft.bank?.name ?? '—'),
             SummaryRow(label: 'To', value: draft.recipient.maskedAccountNumber),
             SummaryRow(label: 'Amount', value: draft.amount.format()),
             const SummaryRow(label: 'Fee', value: 'No fee'),
@@ -213,6 +305,7 @@ class ReceiptStep extends StatelessWidget {
               ? "We'll send this as soon as you have a network. "
                     'It is saved, so closing the app will not lose it.'
               : '${receipt.amount.format()} is on its way to '
+                    '${receipt.bankName}, '
                     '${receipt.recipient.maskedAccountNumber}.',
           textAlign: TextAlign.center,
           style: texts.bodyMedium?.copyWith(color: colors.textSubheading),
@@ -220,6 +313,7 @@ class ReceiptStep extends StatelessWidget {
         AppSize.h(AppSize.lg),
         SummaryCard(
           children: [
+            SummaryRow(label: 'Bank', value: receipt.bankName),
             SummaryRow(
               label: 'To',
               value: receipt.recipient.maskedAccountNumber,

@@ -26,6 +26,8 @@ class TransferRepositoryImpl implements TransferRepository {
   /// riding on a network call that may not come back.
   @override
   Future<Either<Failure, TransferReceipt>> queue({
+    required String bankCode,
+    required String bankName,
     required String recipient,
     required Money amount,
   }) => _runner(
@@ -41,11 +43,16 @@ class TransferRepositoryImpl implements TransferRepository {
       final action = await _sync.enqueue(
         type: PendingActionType.send,
         amountKobo: amount.kobo,
-        payload: {'recipient': recipient},
+        payload: {
+          'recipient': recipient,
+          'bankCode': bankCode,
+          'bankName': bankName,
+        },
       );
 
       return TransferReceipt(
         reference: action.id,
+        bankName: bankName,
         recipient: recipient,
         amount: amount,
         settled: _settled(action.id),

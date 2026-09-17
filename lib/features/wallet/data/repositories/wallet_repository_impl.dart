@@ -2,6 +2,7 @@ import 'package:dartz/dartz.dart';
 import 'package:injectable/injectable.dart';
 import 'package:novapay/core/error/failure.dart';
 import 'package:novapay/core/exception/app_exceptions.dart';
+import 'package:novapay/core/extensions/string_extension.dart';
 import 'package:novapay/core/sync/pending_action.dart';
 import 'package:novapay/core/sync/sync_service.dart';
 import 'package:novapay/features/wallet/domain/entities/activity_item.dart';
@@ -76,11 +77,20 @@ class WalletRepositoryImpl implements WalletRepository {
   };
 
   String _titleFor(PendingAction action) => switch (action.type) {
-    PendingActionType.send =>
-      'To ${action.payload['recipient'] ?? 'a NovaPay account'}',
+    PendingActionType.send => _sendTitle(action),
     PendingActionType.contribute => 'Savings contribution',
     PendingActionType.fund => 'Adding to wallet',
   };
+
+  /// Older queued rows never carried a bank name, so this still reads for
+  /// those without one.
+  String _sendTitle(PendingAction action) {
+    final recipient = action.payload['recipient'] as String?;
+    final bankName = action.payload['bankName'] as String?;
+    if (recipient == null) return 'To a NovaPay account';
+    if (bankName == null) return 'To $recipient';
+    return 'To $bankName, ${recipient.maskedAccountNumber}';
+  }
 
   ActivityItem _fromTransaction(Transaction transaction) => ActivityItem(
     id: transaction.id,

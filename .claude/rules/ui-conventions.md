@@ -115,3 +115,28 @@ All in `lib/core/components/`.
 ## Lists
 `ListView.builder` for anything unbounded, with a `ValueKey` per row so state survives reordering.
 Never `Column` inside `SingleChildScrollView` for a list that grows.
+
+## The tab bar is translucent, and content sits behind it
+`CustomNavigationBar` blurs and tints whatever scrolls behind it (`BackdropFilter` clipped to the
+bar's own notch shape) rather than painting a solid block — `AppShell`'s `Scaffold` sets
+`extendBody: true` so there is something to blur in the first place.
+
+**Every tab's scrollable content must add `CustomNavigationBar.reservedHeight(context)` to its own
+bottom padding.** That's the single definition of how much space the bar actually occupies
+(mirrors its own internal layout math), so a list's last item clears it once scrolled to the end
+instead of being stuck half-visible underneath. A tab with a pinned `CustomScaffold(bottomBar:)`
+wraps that bar in `Padding(padding: EdgeInsets.only(bottom: reservedHeight))` instead — the inner
+`Scaffold` already keeps its body clear of its own `bottomBar`, so only the fixed bar itself needs
+lifting above the outer translucent one.
+
+This only applies to the four tab pages. A pushed task screen (`SendMoneyPage`, `AddMoneyPage`, …)
+has no shell tab bar behind it — don't add `reservedHeight` there.
+
+## Bottom sheets
+`BankPickerSheet` (`lib/features/send_money/presentation/widgets/bank_picker_sheet.dart`) is the
+first `showModalBottomSheet` in this app — there is no shared sheet component yet, only the
+convention: wrap the sheet's own content in `SafeArea(top: false)`, because
+`showModalBottomSheet`'s default `useSafeArea: false` only strips top padding via
+`MediaQuery.removePadding`, not the bottom gesture-bar inset. A sheet is a separate overlay route
+and already renders above the shell's tab bar, so it needs no `CustomNavigationBar.reservedHeight`
+padding of its own.

@@ -7,6 +7,8 @@ abstract class TransferRepository {
   Future<Either<Failure, Money>> available();
 
   Future<Either<Failure, TransferReceipt>> queue({
+    required String bankCode,
+    required String bankName,
     required String recipient,
     required Money amount,
   });

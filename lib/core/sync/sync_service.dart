@@ -184,6 +184,7 @@ class SyncServiceImpl implements SyncService {
           idempotencyKey: attempt.id,
           recipient: attempt.payload['recipient'] as String,
           amountKobo: attempt.amountKobo,
+          bankName: attempt.payload['bankName'] as String?,
         ),
         PendingActionType.contribute => await _api.contribute(
           idempotencyKey: attempt.id,

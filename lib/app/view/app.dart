@@ -1,9 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:novapay/app/presentation/cubit/theme_cubit.dart';
-import 'package:novapay/app/view/app_shell.dart';
+import 'package:novapay/app/routes/routes_generator.dart';
 import 'package:novapay/config/theme/app_theme.dart';
 import 'package:novapay/core/injections/injection.dart';
 import 'package:novapay/features/profile/presentation/cubit/profile_cubit.dart';
@@ -22,6 +23,10 @@ class _AppState extends State<App> {
   final ThemeCubit _theme = sl<ThemeCubit>();
   final ProfileCubit _profile = sl<ProfileCubit>();
 
+  // Built once and held here, not inline in build(): a fresh GoRouter on
+  // every theme toggle would reset navigation back to the initial route.
+  final GoRouter _router = buildRouter();
+
   @override
   void initState() {
     super.initState();
@@ -36,24 +41,26 @@ class _AppState extends State<App> {
         BlocProvider<ThemeCubit>.value(value: _theme),
         BlocProvider<ProfileCubit>.value(value: _profile),
       ],
-      child: const AppView(),
+      child: AppView(router: _router),
     );
   }
 }
 
 class AppView extends StatelessWidget {
-  const new({super.key});
+  const new({required this.router, super.key});
+
+  final GoRouter router;
 
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<ThemeCubit, AppThemeMode>(
-      builder: (context, mode) => MaterialApp(
+      builder: (context, mode) => MaterialApp.router(
         theme: AppTheme.light,
         darkTheme: AppTheme.dark,
         themeMode: mode.asThemeMode,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: const AppShell(),
+        routerConfig: router,
       ),
     );
   }

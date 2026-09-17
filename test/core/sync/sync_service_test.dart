@@ -33,6 +33,7 @@ class _GatedApi implements NovaPayApi {
     required String idempotencyKey,
     required String recipient,
     required int amountKobo,
+    String? bankName,
   }) async {
     transferCalls++;
     await gate.future;
@@ -40,6 +41,7 @@ class _GatedApi implements NovaPayApi {
       idempotencyKey: idempotencyKey,
       recipient: recipient,
       amountKobo: amountKobo,
+      bankName: bankName,
     );
   }
 

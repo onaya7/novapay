@@ -9,6 +9,7 @@ import 'package:novapay/core/money/money.dart';
 import 'package:novapay/features/funding/domain/entities/funding_draft.dart';
 import 'package:novapay/features/funding/presentation/cubit/add_money_cubit.dart';
 import 'package:novapay/features/funding/presentation/view/add_money_page.dart';
+import 'package:novapay/features/send_money/domain/entities/bank.dart';
 import 'package:novapay/features/send_money/domain/entities/transfer_draft.dart';
 import 'package:novapay/features/send_money/domain/entities/transfer_receipt.dart';
 import 'package:novapay/features/send_money/presentation/cubit/send_money_cubit.dart';
@@ -24,13 +25,17 @@ class _MockAddMoneyCubit extends MockCubit<AddMoneyState>
     implements AddMoneyCubit;
 
 const _available = Money.fromKobo(2000000);
+const _bank = Bank(code: '058', name: 'Guaranty Trust Bank');
+const _otherBank = Bank(code: '044', name: 'Access Bank');
 
 TransferDraft _draft({
   SendStep step = SendStep.recipient,
+  Bank? bank = _bank,
   String recipient = '0123456789',
   int amountKobo = 500000,
 }) => TransferDraft(
   step: step,
+  bank: bank,
   recipient: recipient,
   amount: Money.fromKobo(amountKobo),
   available: _available,
@@ -56,6 +61,8 @@ void main() {
   String ctaLabel(WidgetTester tester) =>
       tester.widget<CustomButton>(find.byType(CustomButton).first).label;
 
+  setUpAll(() => registerFallbackValue(_bank));
+
   setUp(() {
     cubit = _MockSendMoneyCubit();
     when(cubit.start).thenAnswer((_) async {});
@@ -63,6 +70,7 @@ void main() {
     when(() => cubit.next()).thenReturn(null);
     when(() => cubit.back()).thenReturn(null);
     when(() => cubit.recipientChanged(any())).thenReturn(null);
+    when(() => cubit.bankChanged(any())).thenReturn(null);
     when(() => cubit.amountChanged(any())).thenReturn(null);
   });
 
@@ -108,6 +116,68 @@ void main() {
 
       await tester.enterText(find.byType(TextField), '0123456789');
       verify(() => cubit.recipientChanged('0123456789')).called(1);
+    });
+
+    testWidgets('no bank chosen leaves the CTA dead even with a valid number', (
+      tester,
+    ) async {
+      await pumpView(tester, SendMoneyState.editing(_draft(bank: null)));
+
+      expect(
+        tester.widget<CustomButton>(find.byType(CustomButton).first).onPressed,
+        isNull,
+      );
+    });
+
+    testWidgets('the bank selector shows a placeholder until one is chosen', (
+      tester,
+    ) async {
+      await pumpView(tester, SendMoneyState.editing(_draft(bank: null)));
+
+      expect(find.text('Choose a bank'), findsOneWidget);
+    });
+
+    testWidgets('a chosen bank replaces the placeholder', (tester) async {
+      await pumpView(tester, SendMoneyState.editing(_draft()));
+
+      expect(find.text('Guaranty Trust Bank'), findsOneWidget);
+      expect(find.text('Choose a bank'), findsNothing);
+    });
+
+    testWidgets('picking a bank from the sheet reaches the cubit', (
+      tester,
+    ) async {
+      await pumpView(
+        tester,
+        SendMoneyState.editing(_draft(bank: null), banks: const [_bank]),
+      );
+
+      await tester.tap(find.text('Choose a bank'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Guaranty Trust Bank'));
+      await tester.pumpAndSettle();
+
+      verify(() => cubit.bankChanged(_bank)).called(1);
+    });
+
+    testWidgets('the sheet filters as the customer searches', (tester) async {
+      await pumpView(
+        tester,
+        SendMoneyState.editing(
+          _draft(bank: null),
+          banks: const [_bank, _otherBank],
+        ),
+      );
+
+      await tester.tap(find.text('Choose a bank'));
+      await tester.pumpAndSettle();
+      expect(find.text('Access Bank'), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField).last, 'guaranty');
+      await tester.pumpAndSettle();
+
+      expect(find.text('Guaranty Trust Bank'), findsOneWidget);
+      expect(find.text('Access Bank'), findsNothing);
     });
 
     testWidgets('back from the first step leaves the flow', (tester) async {
@@ -298,6 +368,7 @@ void main() {
           _draft(step: SendStep.confirm),
           const TransferReceipt(
             reference: 'r1',
+            bankName: 'Guaranty Trust Bank',
             recipient: '0123456789',
             amount: Money.fromKobo(500000),
             settled: true,
@@ -318,6 +389,7 @@ void main() {
           _draft(step: SendStep.confirm),
           const TransferReceipt(
             reference: 'r1',
+            bankName: 'Guaranty Trust Bank',
             recipient: '0123456789',
             amount: Money.fromKobo(500000),
             settled: false,
@@ -337,6 +409,7 @@ void main() {
           _draft(step: SendStep.confirm),
           const TransferReceipt(
             reference: 'r1',
+            bankName: 'Guaranty Trust Bank',
             recipient: '0123456789',
             amount: Money.fromKobo(500000),
             settled: true,

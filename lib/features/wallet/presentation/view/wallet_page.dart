@@ -1,17 +1,18 @@
 import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:novapay/app/presentation/cubit/nav_cubit.dart';
+import 'package:novapay/app/routes/routes_name.dart';
+import 'package:novapay/core/components/custom_navigation_bar.dart';
 import 'package:novapay/core/components/custom_scaffold.dart';
 import 'package:novapay/core/components/section_header.dart';
 import 'package:novapay/core/components/state_widgets.dart';
 import 'package:novapay/core/constants/app_size.dart';
 import 'package:novapay/core/extensions/date_time_extension.dart';
 import 'package:novapay/core/injections/injection.dart';
-import 'package:novapay/features/funding/presentation/view/add_money_page.dart';
 import 'package:novapay/features/profile/presentation/cubit/profile_cubit.dart';
-import 'package:novapay/features/send_money/presentation/view/send_money_page.dart';
+import 'package:novapay/features/wallet/domain/entities/activity_item.dart';
 import 'package:novapay/features/wallet/domain/entities/wallet_snapshot.dart';
 import 'package:novapay/features/wallet/presentation/cubit/wallet_cubit.dart';
 import 'package:novapay/features/wallet/presentation/widgets/wallet_widgets.dart';
@@ -120,20 +121,28 @@ class _Ready extends StatelessWidget {
 
     return ListView.separated(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(
+      padding: EdgeInsets.fromLTRB(
         AppSize.md,
         AppSize.md,
         AppSize.md,
-        AppSize.xxl,
+        AppSize.xxl + CustomNavigationBar.reservedHeight(context),
       ),
       itemCount: snapshot.activity.length + 1,
       separatorBuilder: (context, index) => AppSize.h(AppSize.smd),
       itemBuilder: (context, index) {
         if (index == 0) return _Header(snapshot: snapshot);
         final item = snapshot.activity[index - 1];
-        return ActivityRow(key: ValueKey(item.id), item: item);
+        return ActivityRow(
+          key: ValueKey(item.id),
+          item: item,
+          onTap: () => _openDetail(context, item),
+        );
       },
     );
+  }
+
+  void _openDetail(BuildContext context, ActivityItem item) {
+    unawaited(context.pushNamed(RoutesName.transactionDetail, extra: item));
   }
 }
 
@@ -175,17 +184,19 @@ class _Header extends StatelessWidget {
   }
 
   void _openSendMoney(BuildContext context) {
-    Navigator.of(context)
-        .push(MaterialPageRoute<void>(builder: (_) => const SendMoneyPage()));
+    unawaited(context.pushNamed(RoutesName.sendMoney));
   }
 
   /// Savings and Activity are destinations, so they switch tab rather than
   /// pushing a second copy over the shell.
   void _goToTab(BuildContext context, int index) =>
-      context.read<NavCubit>().select(index);
+      context.goNamed(switch (index) {
+        1 => RoutesName.savings,
+        2 => RoutesName.activity,
+        _ => RoutesName.wallet,
+      });
 
   void _openAddMoney(BuildContext context) {
-    Navigator.of(context)
-        .push(MaterialPageRoute<void>(builder: (_) => const AddMoneyPage()));
+    unawaited(context.pushNamed(RoutesName.addMoney));
   }
 }
