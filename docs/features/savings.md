@@ -62,7 +62,5 @@ None is paginated.
   blocks it again in case the balance moved.
 - `GoalDateField` passes an explicit `lastDate`. The picker's default is today, which would block
   every valid choice for a goal that is by definition in the future.
-- **The pinned `Create goal` button is padded by `CustomNavigationBar.reservedHeight(context)`**,
-  not left at `CustomScaffold`'s default — this is the one *fixed* element behind the shell (every
-  other tab's bottom padding fix is on a scrolling list), so it needs lifting above the translucent
-  bar explicitly rather than via a list's padding. See `.claude/rules/ui-conventions.md`.
+- **The pinned `Create goal` button uses `CustomScaffold`'s default padding.** The shell's bottom
+  nav is opaque, so nothing here needs lifting above it — see `.claude/rules/ui-conventions.md`.

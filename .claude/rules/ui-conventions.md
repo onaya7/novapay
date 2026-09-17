@@ -78,7 +78,7 @@ All in `lib/core/components/`.
 | Pending, Sent or Rejected state on a row | `StatusChip` |
 | Any amount of money on screen | `MoneyText` |
 | Spinner, skeleton, error, empty, pull-to-refresh body | `state_widgets.dart` |
-| The app's bottom nav | `CustomNavigationBar` + `NavigationTab` — only `AppShell` builds one |
+| The app's bottom nav | Stock `BottomNavigationBar` — only `AppShell` builds one |
 
 - **Scaffolds:** wrap every screen in `CustomScaffold`, never a bare `Scaffold`. A pinned CTA goes
   in `bottomBar:`, never in a `Column` with an `Expanded` above it — that overflows into the button
@@ -116,27 +116,15 @@ All in `lib/core/components/`.
 `ListView.builder` for anything unbounded, with a `ValueKey` per row so state survives reordering.
 Never `Column` inside `SingleChildScrollView` for a list that grows.
 
-## The tab bar is translucent, and content sits behind it
-`CustomNavigationBar` blurs and tints whatever scrolls behind it (`BackdropFilter` clipped to the
-bar's own notch shape) rather than painting a solid block — `AppShell`'s `Scaffold` sets
-`extendBody: true` so there is something to blur in the first place.
-
-**Every tab's scrollable content must add `CustomNavigationBar.reservedHeight(context)` to its own
-bottom padding.** That's the single definition of how much space the bar actually occupies
-(mirrors its own internal layout math), so a list's last item clears it once scrolled to the end
-instead of being stuck half-visible underneath. A tab with a pinned `CustomScaffold(bottomBar:)`
-wraps that bar in `Padding(padding: EdgeInsets.only(bottom: reservedHeight))` instead — the inner
-`Scaffold` already keeps its body clear of its own `bottomBar`, so only the fixed bar itself needs
-lifting above the outer translucent one.
-
-This only applies to the four tab pages. A pushed task screen (`SendMoneyPage`, `AddMoneyPage`, …)
-has no shell tab bar behind it — don't add `reservedHeight` there.
+## The tab bar is opaque
+`AppShell` builds a stock `BottomNavigationBar` — no `extendBody`, no `reservedHeight` padding
+convention. A tab's scrollable content sits above it, not behind it, so no bottom-inset math is
+needed on `WalletPage`, `ActivityPage` or `SavingsPage`. A pushed task screen (`SendMoneyPage`,
+`AddMoneyPage`, …) never had a shell tab bar behind it either way.
 
 ## Bottom sheets
 `BankPickerSheet` (`lib/features/send_money/presentation/widgets/bank_picker_sheet.dart`) is the
 first `showModalBottomSheet` in this app — there is no shared sheet component yet, only the
 convention: wrap the sheet's own content in `SafeArea(top: false)`, because
 `showModalBottomSheet`'s default `useSafeArea: false` only strips top padding via
-`MediaQuery.removePadding`, not the bottom gesture-bar inset. A sheet is a separate overlay route
-and already renders above the shell's tab bar, so it needs no `CustomNavigationBar.reservedHeight`
-padding of its own.
+`MediaQuery.removePadding`, not the bottom gesture-bar inset.

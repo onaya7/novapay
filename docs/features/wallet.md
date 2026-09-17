@@ -78,6 +78,5 @@ send appears without a reload. `refresh()` backs pull-to-refresh and the error r
 - **A queued send's title names the bank when one was chosen.** `_titleFor` reads `bankName` out of
   the pending action's payload and falls back to the pre-bank `'To $recipient'` format when it's
   absent, so older queued or settled rows still read correctly.
-- **The Wallet and Activity lists both add `CustomNavigationBar.reservedHeight(context)` to their
-  own bottom padding**, so the last row clears the translucent shell tab bar instead of ending up
-  stuck behind it — see `.claude/rules/ui-conventions.md`.
+- **The shell's bottom nav is opaque, not translucent**, so neither list needs bottom-inset padding
+  beyond its own static values — see `.claude/rules/ui-conventions.md`.

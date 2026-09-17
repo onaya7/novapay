@@ -4,14 +4,18 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:novapay/config/theme/app_theme_colors.dart';
+import 'package:novapay/core/auth/biometric_authenticator.dart';
 import 'package:novapay/core/components/custom_button.dart';
 import 'package:novapay/core/components/custom_scaffold.dart';
 import 'package:novapay/core/constants/app_size.dart';
+import 'package:novapay/core/injections/injection.dart';
 import 'package:novapay/features/send_money/presentation/cubit/send_money_cubit.dart';
 import 'package:novapay/l10n/l10n.dart';
 
 class BiometricConfirmPage extends StatefulWidget {
-  const new({super.key});
+  const new({this.authenticator, super.key});
+
+  final BiometricAuthenticator? authenticator;
 
   @override
   State<BiometricConfirmPage> createState() => _BiometricConfirmPageState();
@@ -22,7 +26,12 @@ class _BiometricConfirmPageState extends State<BiometricConfirmPage> {
 
   Future<void> _confirm(SendMoneyCubit cubit) async {
     setState(() => _confirming = true);
-    await Future<void>.delayed(const Duration(milliseconds: 900));
+    final authenticator = widget.authenticator ?? sl<BiometricAuthenticator>();
+    final authenticated = await authenticator.authenticate();
+    if (!authenticated) {
+      if (mounted) setState(() => _confirming = false);
+      return;
+    }
     await cubit.submit();
     if (mounted) context.pop();
   }

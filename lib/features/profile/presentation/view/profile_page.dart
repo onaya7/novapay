@@ -2,7 +2,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:novapay/config/theme/app_theme_colors.dart';
 import 'package:novapay/core/components/custom_input_field.dart';
-import 'package:novapay/core/components/custom_navigation_bar.dart';
 import 'package:novapay/core/components/custom_scaffold.dart';
 import 'package:novapay/core/components/section_header.dart';
 import 'package:novapay/core/components/state_widgets.dart';
@@ -54,10 +53,7 @@ class _Ready extends StatelessWidget {
     final texts = Theme.of(context).textTheme;
 
     return SingleChildScrollView(
-      padding: EdgeInsets.only(
-        top: AppSize.md,
-        bottom: AppSize.xxxl + CustomNavigationBar.reservedHeight(context),
-      ),
+      padding: const EdgeInsets.only(top: AppSize.md, bottom: AppSize.xxxl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

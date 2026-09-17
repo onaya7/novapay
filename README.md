@@ -26,14 +26,14 @@
 | NovaSave goal — create, contribute, integer-basis-point progress | **Built** | [`lib/features/savings/`](lib/features/savings/) |
 | Add money — real funding flow, offline queueing, wallet quick action and Send Money's `Fund Wallet` both route to it | **Built** | [`lib/features/funding/`](lib/features/funding/) |
 | Local profile — device-only display name and avatar photo, both read by the wallet greeting | **Built** | [`lib/features/profile/`](lib/features/profile/) |
-| Four-tab bottom nav, translucent and blurred, light/dark/system theme | **Built** | [`lib/app/`](lib/app/), [`lib/core/components/custom_navigation_bar.dart`](lib/core/components/custom_navigation_bar.dart) |
+| Four-tab bottom nav (stock `BottomNavigationBar`), light/dark/system theme | **Built** | [`lib/app/view/app_shell.dart`](lib/app/view/app_shell.dart) |
 | Routing — go_router, `StatefulShellRoute` for the four tabs, named routes for every task screen | **Built** | [`lib/app/routes/`](lib/app/routes/) |
 | Bank picker in Send Money — real banks, real NIP codes, bundled logos, searchable | **Built** | [`lib/features/send_money/`](lib/features/send_money/) |
 | Transaction detail — every activity row is tappable | **Built** | [`lib/features/wallet/presentation/view/transaction_detail_page.dart`](lib/features/wallet/presentation/view/transaction_detail_page.dart) |
 | Local notification on a queued **send** finishing sync | **Built** | [`lib/core/notifications/`](lib/core/notifications/) |
 | Localization scaffold — English, Spanish, Hausa; Send Money screen fully localized | **Built** | [`lib/l10n/`](lib/l10n/), [`lib/app/presentation/cubit/locale_cubit.dart`](lib/app/presentation/cubit/locale_cubit.dart) |
 | Golden tests — wallet home, loading/empty/populated, light/dark | **Built** | [`test/features/wallet/presentation/view/wallet_page_golden_test.dart`](test/features/wallet/presentation/view/wallet_page_golden_test.dart) |
-| Biometric confirmation above a threshold — **UI and navigation only** | **Built (stub)** | [`lib/features/send_money/presentation/view/biometric_confirm_page.dart`](lib/features/send_money/presentation/view/biometric_confirm_page.dart) |
+| Biometric confirmation above a threshold, via `local_auth` | **Built** | [`lib/core/auth/biometric_authenticator.dart`](lib/core/auth/biometric_authenticator.dart) |
 | Leases (durable single-flight), status-code-based retry classification | **`[DESIGN — not built]`** | Argued below; deliberately not built yet |
 
 The last row is the honest one. That is the right answer for a production wallet and the reasoning is
@@ -41,11 +41,11 @@ kept below, because the reasoning is the deliverable. It is not in the code, and
 only place that needs checking to know that.
 
 The four stretch-goal rows above are marked **Built**, not **`[DESIGN — not built]`**, but they are
-not built to the same bar as the brief's core scope: the biometric row is explicitly UI/navigation
-only (no `local_auth` call backs it), the notification and localization rows cover exactly the one
-screen and the one queue event asked for rather than the whole app, and the golden test covers one
-screen. See [Stretch goals](#stretch-goals-notifications-localization-golden-tests-biometric-stub)
-for what each one does and does not claim.
+not built to the same bar as the brief's core scope: the notification and localization rows cover
+exactly the one screen and the one queue event asked for rather than the whole app, and the golden
+test covers one screen. See [Stretch
+goals](#stretch-goals-notifications-localization-golden-tests-biometric-confirmation) for what each one does
+and does not claim.
 
 ---
 
@@ -70,7 +70,7 @@ If you read three things: **[Offline and sync](#offline-and-sync)** → **[Money
 | Widget + integration tests | [Testing](#testing) |
 | What is actually built | [Implementation status](#implementation-status) |
 | AI usage | [AI_USAGE.md](AI_USAGE.md) |
-| Stretch goals: notifications, localization, golden tests, biometric stub | [Stretch goals](#stretch-goals-notifications-localization-golden-tests-biometric-stub) |
+| Stretch goals: notifications, localization, golden tests, biometric confirmation | [Stretch goals](#stretch-goals-notifications-localization-golden-tests-biometric-confirmation) |
 | Folder structure | [Folder structure](#folder-structure) |
 
 ## How to read the claims
@@ -158,7 +158,7 @@ lib/
 │   ├── funding/                   Add money — data / domain / presentation
 │   ├── profile/                   Local display name, theme + language settings
 │   ├── savings/                   NovaSave goals
-│   ├── send_money/                Bank transfer, the bank picker, the biometric stub
+│   ├── send_money/                Bank transfer, the bank picker, the biometric confirmation flow
 │   └── wallet/                    Wallet home, Activity tab, transaction detail
 ├── gen/                           flutter_gen output — tracked, unlike build_runner's *.g.dart
 ├── l10n/                          ARB sources (lib/l10n/arb/), gen/ output, the l10n extension
@@ -204,15 +204,15 @@ over them:
 
 **Four stretch goals beyond the brief's core scope are also built** — a local notification on a
 queued send syncing, a localization scaffold (English, Spanish, Hausa) with the Send Money screen
-fully localized, golden tests for the wallet home screen, and a biometric-confirmation screen above
-a threshold amount. None of them is the thing being graded `[SOURCE: brief §2.4]`, and the biometric
-one is explicitly UI and navigation only — see [Stretch
-goals](#stretch-goals-notifications-localization-golden-tests-biometric-stub) for what each one
-does and does not claim.
+fully localized, golden tests for the wallet home screen, and biometric confirmation (`local_auth`)
+above a threshold amount. None of them is the thing being graded `[SOURCE: brief §2.4]` — see
+[Stretch
+goals](#stretch-goals-notifications-localization-golden-tests-biometric-confirmation) for what each
+one covers and does not.
 
 ---
 
-## Stretch goals: notifications, localization, golden tests, biometric stub
+## Stretch goals: notifications, localization, golden tests, biometric confirmation
 
 Each of these is real, tested code — not a placeholder screen — but each is scoped narrower than the
 core brief. What each one covers, and what it deliberately does not:
@@ -230,8 +230,9 @@ Flutter-plugin-free and testable without a platform channel.
 **Setup:**
 - Android needs `POST_NOTIFICATIONS` (declared in `AndroidManifest.xml`, Android 13+) and core
   library desugaring, both already wired (`android/app/build.gradle.kts`).
-- `NotificationService.initialize()` requests permission on first launch, from `App`'s
-  `_AppState.initState()` alongside starting `TransferSyncNotifier`.
+- `NotificationService.initialize()` requests permission and `TransferSyncNotifier.start()` begins
+  listening, both from `bootstrap()` before `runApp()` — early enough that a send queued and settled
+  while the UI is still on its first frame still notifies.
 - **Not covered:** tapping the notification does not deep-link anywhere (no `onDidReceiveNotificationResponse` handler), and there is no in-app notification history — this is fire-and-forget, matching exactly what the brief asks for.
 
 ### Localization scaffold — English, Spanish, Hausa
@@ -242,8 +243,8 @@ generated by `flutter gen-l10n` into `lib/l10n/gen/` (gitignored, rebuilt by `ma
 like `ThemeCubit`, drives `MaterialApp.router`'s `locale:`; `AppLocale.system` follows the device.
 A language picker sits in Profile → Settings, next to the theme toggle.
 
-**The Send Money screen — every step, the receipt, the bank picker and the biometric stub — reads
-every user-facing string through `context.l10n`.** No other screen is localized yet; `walletTitle`
+**The Send Money screen — every step, the receipt, the bank picker and the biometric confirmation
+screen — reads every user-facing string through `context.l10n`.** No other screen is localized yet; `walletTitle`
 was the only key before this change, and it stayed the only one outside Send Money. That is a
 deliberate scope boundary, not an oversight: fully localizing five features is a different-sized
 task than proving the scaffold works end to end on one.
@@ -265,20 +266,30 @@ Run `make golden` to check them, `make golden-update` after an intentional visua
 screen. **Not covered:** every other screen still has zero golden coverage; this proves the pattern
 works, not that the whole app is pinned visually.
 
-### Biometric confirmation above a threshold — UI and navigation only
+### Biometric confirmation above a threshold
 
-Above `kBiometricConfirmThresholdKobo` (₦50,000, `lib/features/send_money/domain/entities/transfer_draft.dart`),
-the confirm step's Send button pushes `BiometricConfirmPage`
-(`lib/features/send_money/presentation/view/biometric_confirm_page.dart`) instead of calling
-`cubit.submit()` directly. The page shows a fingerprint icon and a timed 900ms delay to read as a
-prompt, then calls the same `submit()` on the same `SendMoneyCubit` (handed across the route as
-`extra`, not a new instance) and pops.
+Above `kBiometricConfirmThresholdKobo` (₦50,000,
+`lib/features/send_money/domain/entities/transfer_draft.dart`), the confirm step's Send button
+pushes `BiometricConfirmPage` (`lib/features/send_money/presentation/view/biometric_confirm_page.dart`)
+instead of calling `cubit.submit()` directly. The page calls
+`BiometricAuthenticator.authenticate()` and only calls the same `submit()` on the same
+`SendMoneyCubit` (handed across the route as `extra`, not a new instance) — then pops — when
+`authenticate()` returns `true`.
 
-**There is no `local_auth` call anywhere in this path.** No Face ID, no fingerprint sensor, no
-device-credential fallback — a fast tap or an automated test gets through exactly as easily as a
-real prompt would. This is UI and navigation only, precisely as scoped, and the code says so at the
-threshold constant. Wiring a real `local_auth` check is the natural next step and touches only this
-one screen.
+`BiometricAuthenticator` (`lib/core/auth/biometric_authenticator.dart`) wraps `local_auth`'s
+`LocalAuthentication` behind an interface, resolved through `sl<BiometricAuthenticator>()` the same
+way every other cross-cutting service in this app is. `authenticate()` checks
+`isDeviceSupported()` first, which covers a device-PIN/pattern fallback as well as biometrics, then
+calls `LocalAuthentication.authenticate()`; a cancelled prompt, no enrolled biometric, a locked-out
+sensor or unsupported hardware all fold into a single `false` — the confirm screen resets its
+button and the customer stays on the same screen with nothing sent, rather than being told which of
+those four happened.
+
+**Setup:** `android/app/src/main/kotlin/com/novapay/app/MainActivity.kt` extends
+`FlutterFragmentActivity` (`local_auth`'s Android requirement) and
+`ios/Runner/Info.plist` carries `NSFaceIDUsageDescription`, both already wired. **Not covered:** no
+UI ever names *why* a prompt failed — "not enrolled" and "cancelled" read identically to the
+customer.
 
 ---
 

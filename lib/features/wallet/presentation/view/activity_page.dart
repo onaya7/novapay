@@ -4,7 +4,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:novapay/app/routes/routes_name.dart';
-import 'package:novapay/core/components/custom_navigation_bar.dart';
 import 'package:novapay/core/components/custom_scaffold.dart';
 import 'package:novapay/core/components/state_widgets.dart';
 import 'package:novapay/core/constants/app_size.dart';
@@ -106,11 +105,11 @@ class _Rows extends StatelessWidget {
 
     return ListView.separated(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: EdgeInsets.fromLTRB(
+      padding: const EdgeInsets.fromLTRB(
         AppSize.md,
         AppSize.md,
         AppSize.md,
-        AppSize.md + CustomNavigationBar.reservedHeight(context),
+        AppSize.md,
       ),
       itemCount: rows.length,
       separatorBuilder: (context, index) => AppSize.h(AppSize.smd),

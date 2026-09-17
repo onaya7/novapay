@@ -18,6 +18,13 @@ class NotificationServiceImpl implements NotificationService {
 
   final FlutterLocalNotificationsPlugin _plugin;
 
+  static const AndroidNotificationChannel _channel = AndroidNotificationChannel(
+    'transfers_synced',
+    'Transfers',
+    description: 'A queued transfer finished syncing',
+    importance: Importance.high,
+  );
+
   static const AndroidNotificationDetails _androidDetails =
       AndroidNotificationDetails(
         'transfers_synced',
@@ -34,6 +41,11 @@ class NotificationServiceImpl implements NotificationService {
       iOS: DarwinInitializationSettings(),
     );
     await _plugin.initialize(settings: settings);
+    await _plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >()
+        ?.createNotificationChannel(_channel);
     await _plugin
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin

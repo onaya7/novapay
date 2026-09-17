@@ -5,9 +5,11 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
+import 'package:local_auth/local_auth.dart';
 import 'package:novapay/app/presentation/cubit/locale_cubit.dart';
 import 'package:novapay/config/flavor/flavor.dart';
 import 'package:novapay/config/flavor/flavor_config.dart';
+import 'package:novapay/core/auth/biometric_authenticator.dart';
 import 'package:novapay/core/injections/injection.dart';
 import 'package:novapay/core/local_data/local_data_storage.dart';
 import 'package:novapay/core/local_data/secure_local_data_storage.dart';
@@ -67,6 +69,14 @@ void main() {
     expect(
       identical(sl<NotificationService>(), sl<NotificationService>()),
       isTrue,
+    );
+  });
+
+  test('resolves the biometric authenticator', () {
+    expect(sl<LocalAuthentication>(), isA<LocalAuthentication>());
+    expect(
+      sl<BiometricAuthenticator>(),
+      isA<LocalAuthBiometricAuthenticator>(),
     );
   });
 

@@ -3,6 +3,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:injectable/injectable.dart';
 import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
+import 'package:local_auth/local_auth.dart';
 import 'package:novapay/config/flavor/flavor_config.dart';
 import 'package:novapay/utils/either_safe_runner.dart';
 import 'package:uuid/uuid.dart';
@@ -15,6 +16,9 @@ abstract class RegisterModule {
   @lazySingleton
   FlutterLocalNotificationsPlugin get notificationsPlugin =>
       FlutterLocalNotificationsPlugin();
+
+  @lazySingleton
+  LocalAuthentication get localAuthentication => LocalAuthentication();
 
   @lazySingleton
   EitherSafeRunner get eitherSafeRunner => const EitherSafeRunner();

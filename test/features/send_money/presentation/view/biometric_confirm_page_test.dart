@@ -1,8 +1,8 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:novapay/core/auth/biometric_authenticator.dart';
 import 'package:novapay/core/components/custom_button.dart';
 import 'package:novapay/core/money/money.dart';
 import 'package:novapay/features/send_money/domain/entities/transfer_draft.dart';
@@ -14,8 +14,12 @@ import '../../../../helpers/helpers.dart';
 class _MockSendMoneyCubit extends MockCubit<SendMoneyState>
     implements SendMoneyCubit;
 
+class _MockBiometricAuthenticator extends Mock
+    implements BiometricAuthenticator;
+
 void main() {
   late _MockSendMoneyCubit cubit;
+  late _MockBiometricAuthenticator authenticator;
 
   const draft = TransferDraft(
     step: SendStep.confirm,
@@ -26,18 +30,20 @@ void main() {
   Future<void> pump(WidgetTester tester) => tester.pumpApp(
     BlocProvider<SendMoneyCubit>.value(
       value: cubit,
-      child: const BiometricConfirmPage(),
+      child: BiometricConfirmPage(authenticator: authenticator),
     ),
   );
 
   setUp(() {
     cubit = _MockSendMoneyCubit();
+    authenticator = _MockBiometricAuthenticator();
     whenListen(
       cubit,
       const Stream<SendMoneyState>.empty(),
       initialState: const SendMoneyState.editing(draft),
     );
     when(cubit.submit).thenAnswer((_) async {});
+    when(authenticator.authenticate).thenAnswer((_) async => true);
   });
 
   testWidgets('names the exact amount being confirmed', (tester) async {
@@ -46,19 +52,30 @@ void main() {
     expect(find.textContaining('₦60,000.00'), findsOneWidget);
   });
 
-  testWidgets('confirming submits after the simulated prompt, then leaves', (
+  testWidgets('confirming submits after authentication, then leaves', (
     tester,
   ) async {
     await pump(tester);
 
     await tester.tap(find.byType(CustomButton));
-    await tester.pump();
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
-
-    await tester.pump(const Duration(milliseconds: 900));
     await tester.pumpAndSettle();
 
+    verify(authenticator.authenticate).called(1);
     verify(cubit.submit).called(1);
     expect(find.byType(BiometricConfirmPage), findsNothing);
+  });
+
+  testWidgets('a failed or cancelled authentication never submits', (
+    tester,
+  ) async {
+    when(authenticator.authenticate).thenAnswer((_) async => false);
+    await pump(tester);
+
+    await tester.tap(find.byType(CustomButton));
+    await tester.pumpAndSettle();
+
+    verify(authenticator.authenticate).called(1);
+    verifyNever(cubit.submit);
+    expect(find.byType(BiometricConfirmPage), findsOneWidget);
   });
 }

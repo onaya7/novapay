@@ -21,6 +21,13 @@ void main() {
       ),
     );
     registerFallbackValue(const NotificationDetails());
+    registerFallbackValue(
+      const AndroidNotificationChannel(
+        'id',
+        'name',
+        importance: Importance.high,
+      ),
+    );
   });
 
   setUp(() {
@@ -47,6 +54,8 @@ void main() {
           >(),
     ).thenReturn(ios);
     when(android.requestNotificationsPermission).thenAnswer((_) async => true);
+    when(() => android.createNotificationChannel(any()))
+        .thenAnswer((_) async {});
     when(
       () => ios.requestPermissions(
         alert: any(named: 'alert'),
@@ -54,10 +63,10 @@ void main() {
         sound: any(named: 'sound'),
       ),
     ).thenAnswer((_) async => true);
-
     await service.initialize();
 
     verify(() => plugin.initialize(settings: any(named: 'settings'))).called(1);
+    verify(() => android.createNotificationChannel(any())).called(1);
     verify(android.requestNotificationsPermission).called(1);
     verify(() => ios.requestPermissions(alert: true, badge: true, sound: true))
         .called(1);

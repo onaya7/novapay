@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:novapay/app/routes/routes_name.dart';
 import 'package:novapay/core/components/custom_button.dart';
-import 'package:novapay/core/components/custom_navigation_bar.dart';
 import 'package:novapay/core/components/custom_scaffold.dart';
 import 'package:novapay/core/components/state_widgets.dart';
 import 'package:novapay/core/constants/app_size.dart';
@@ -38,17 +37,10 @@ class SavingsView extends StatelessWidget {
     return CustomScaffold(
       title: 'NovaSave',
       padding: EdgeInsets.zero,
-      // Lifted clear of the translucent shell tab bar below it, not tucked
-      // behind it.
-      bottomBar: Padding(
-        padding: EdgeInsets.only(
-          bottom: CustomNavigationBar.reservedHeight(context),
-        ),
-        child: CustomButton(
-          label: 'Create goal',
-          leading: const Icon(Icons.add, size: AppSize.iconMd),
-          onPressed: () => _openCreate(context),
-        ),
+      bottomBar: CustomButton(
+        label: 'Create goal',
+        leading: const Icon(Icons.add, size: AppSize.iconMd),
+        onPressed: () => _openCreate(context),
       ),
       body: RefreshIndicator(
         onRefresh: () => context.read<SavingsCubit>().refresh(),

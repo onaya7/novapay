@@ -34,8 +34,9 @@ rule lives in a widget.
    routed through `context.l10n` (`lib/l10n/arb/`; English, Spanish and Hausa).
 6. `presentation/widgets/bank_picker_sheet.dart` / `bank_avatar.dart` — the searchable picker and
    the logo-or-initials avatar it shares with the recipient step.
-7. `presentation/view/biometric_confirm_page.dart` — the biometric-confirmation stub, pushed as
+7. `presentation/view/biometric_confirm_page.dart` — the biometric confirmation screen, pushed as
    `RoutesName.biometricConfirm` when `requiresBiometricConfirmation` is true.
+8. `core/auth/biometric_authenticator.dart` — `BiometricAuthenticator`, backed by `local_auth`.
 
 ## Gotchas
 - **The amount step advances even when there is not enough.** `canAdvance` is deliberately true
@@ -69,11 +70,15 @@ rule lives in a widget.
   with no `kPendingActionSchemaVersion` bump. `WalletRepositoryImpl` and the server's
   `TransferServiceImpl` both fall back to the pre-bank title format for older rows that never
   carried one.
-- **`requiresBiometricConfirmation` is UI and navigation only.** Above
-  `kBiometricConfirmThresholdKobo` (₦50,000), the confirm CTA pushes `BiometricConfirmPage` instead
-  of calling `cubit.submit()` directly; the page simulates the prompt with a timed delay, then calls
-  the same `submit()` and pops. No `local_auth` check backs it — there is nothing here a jailbroken
-  device or a skipped animation frame couldn't bypass.
+- **Above `kBiometricConfirmThresholdKobo` (₦50,000), the confirm CTA pushes `BiometricConfirmPage`**
+  instead of calling `cubit.submit()` directly. The page calls `BiometricAuthenticator.authenticate()`
+  (`local_auth` underneath: Face ID/fingerprint, falling back to device PIN/pattern per
+  `isDeviceSupported()`) and only calls `submit()` — then pops — when it returns `true`. A cancelled,
+  refused or unenrolled prompt resets the button and leaves the confirm step exactly where it was.
+- **`BiometricAuthenticator` is resolved through `sl<BiometricAuthenticator>()`**, the same DI
+  convention as every other cross-cutting service (`register_module.dart` provides the underlying
+  `LocalAuthentication`); `BiometricConfirmPage`'s constructor also takes an optional override, which
+  is how tests substitute a mock without touching the container.
 - **`BiometricConfirmPage` is handed the live `SendMoneyCubit`, not a copy.** The route reads it
   back from `state.extra` and wraps it in `BlocProvider.value`, so the page acts on the same draft
   the confirm step was already holding — there is no second cubit to keep in sync.
