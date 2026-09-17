@@ -87,10 +87,10 @@ extension AppThemeModeX on AppThemeMode {
   };
 
   /// The word on the toggle.
-  String get label => switch (this) {
-    AppThemeMode.system => 'System',
-    AppThemeMode.light => 'Light',
-    AppThemeMode.dark => 'Dark',
+  String label(AppLocalizations l10n) => switch (this) {
+    AppThemeMode.system => l10n.systemLabel,
+    AppThemeMode.light => l10n.lightLabel,
+    AppThemeMode.dark => l10n.darkLabel,
   };
 }
 
@@ -103,11 +103,13 @@ extension AppLocaleX on AppLocale {
     AppLocale.fr => const Locale('fr'),
   };
 
-  /// The word on the toggle.
-  String get label => switch (this) {
-    AppLocale.system => 'System',
+  /// The word on the toggle. A language names itself, in its own spelling,
+  /// regardless of the app's current language — the standard convention, so
+  /// it stays findable even to someone who can't read the active locale.
+  String label(AppLocalizations l10n) => switch (this) {
+    AppLocale.system => l10n.systemLabel,
     AppLocale.en => 'English',
-    AppLocale.es => 'Spanish',
-    AppLocale.fr => 'French',
+    AppLocale.es => 'Español',
+    AppLocale.fr => 'Français',
   };
 }

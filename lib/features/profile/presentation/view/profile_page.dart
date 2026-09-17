@@ -10,6 +10,7 @@ import 'package:novapay/features/profile/domain/entities/user_profile.dart';
 import 'package:novapay/features/profile/presentation/cubit/profile_cubit.dart';
 import 'package:novapay/features/profile/presentation/widgets/profile_widgets.dart';
 import 'package:novapay/gen/assets.gen.dart';
+import 'package:novapay/l10n/l10n.dart';
 
 /// The cubit is app-wide and started by `App`, so this reads it rather than
 /// creating one.
@@ -26,7 +27,7 @@ class ProfileView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return CustomScaffold(
-      title: 'Profile',
+      title: context.l10n.profileLabel,
       showBackButton: false,
       body: BlocBuilder<ProfileCubit, ProfileState>(
         builder: (context, state) => switch (state) {
@@ -51,6 +52,7 @@ class _Ready extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
     final texts = Theme.of(context).textTheme;
+    final l10n = context.l10n;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.only(top: AppSize.md, bottom: AppSize.xxxl),
@@ -67,12 +69,12 @@ class _Ready extends StatelessWidget {
                 ),
                 AppSize.h(AppSize.smd),
                 Text(
-                  profile.hasName ? profile.displayName : 'Add your name',
+                  profile.hasName ? profile.displayName : l10n.addYourNameLabel,
                   style: texts.titleLarge,
                 ),
                 AppSize.h(AppSize.xs),
                 Text(
-                  'This device only',
+                  l10n.thisDeviceOnlyLabel,
                   style: texts.bodySmall?.copyWith(color: colors.subtext),
                 ),
               ],
@@ -80,13 +82,13 @@ class _Ready extends StatelessWidget {
           ),
           AppSize.h(AppSize.xl),
           SettingsGroup(
-            title: 'YOU',
+            title: l10n.youSectionTitle,
             children: [_NameField(profile: profile)],
           ),
           AppSize.h(AppSize.lg),
-          const SettingsGroup(
-            title: 'APPEARANCE',
-            children: [
+          SettingsGroup(
+            title: l10n.appearanceSectionTitle,
+            children: const [
               Padding(
                 padding: EdgeInsets.symmetric(vertical: AppSize.smd),
                 child: ThemeModeToggle(),
@@ -94,9 +96,9 @@ class _Ready extends StatelessWidget {
             ],
           ),
           AppSize.h(AppSize.lg),
-          const SettingsGroup(
-            title: 'LANGUAGE',
-            children: [
+          SettingsGroup(
+            title: l10n.languageSectionTitle,
+            children: const [
               Padding(
                 padding: EdgeInsets.symmetric(vertical: AppSize.smd),
                 child: LocaleToggle(),
@@ -104,17 +106,19 @@ class _Ready extends StatelessWidget {
             ],
           ),
           AppSize.h(AppSize.lg),
-          const SettingsGroup(
-            title: 'ABOUT',
+          SettingsGroup(
+            title: l10n.aboutSectionTitle,
             children: [
-              SettingsRow(label: 'Version', value: '1.0.0'),
-              SettingsRow(label: 'Money', value: 'Held as whole kobo'),
+              SettingsRow(label: l10n.versionLabel, value: '1.0.0'),
+              SettingsRow(
+                label: l10n.moneyModelLabel,
+                value: l10n.moneyModelValue,
+              ),
             ],
           ),
           AppSize.h(AppSize.lg),
           Text(
-            'A fictional scenario built for evaluation. No real bank systems, '
-            'customers or credentials are involved.',
+            l10n.disclaimerText,
             style: texts.bodySmall?.copyWith(color: colors.subtext),
           ),
         ],
@@ -145,12 +149,13 @@ class _NameFieldState extends State<_NameField> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSize.smd),
       child: CustomInputField(
-        label: 'Your name',
-        hint: 'What should the wallet call you?',
-        helper: 'Saved on this device, never sent anywhere',
+        label: l10n.yourNameLabel,
+        hint: l10n.yourNameHint,
+        helper: l10n.yourNameHelper,
         controller: _controller,
         onChanged: context.read<ProfileCubit>().rename,
       ),

@@ -13,22 +13,28 @@ extension DateTimeX on DateTime {
   bool get isYesterday =>
       isSameDayAs(DateTime.now().subtract(const Duration(days: 1)));
 
-  /// What a transaction row shows: `Today`, `Yesterday`, `14 Sep`, or the
-  /// year as well once it is no longer this year.
-  String get dayLabel {
-    if (isToday) return 'Today';
-    if (isYesterday) return 'Yesterday';
+  /// What a transaction row shows: [today]/[yesterday], `14 Sep`, or the year
+  /// as well once it is no longer this year. Localized words are supplied by
+  /// the caller, since a plain `DateTime` extension has no `BuildContext`.
+  String dayLabel({required String today, required String yesterday}) {
+    if (isToday) return today;
+    if (isYesterday) return yesterday;
     if (year == DateTime.now().year) return _dayMonth.format(this);
     return _dayMonthYear.format(this);
   }
 
   String get timeLabel => _clock.format(this);
 
-  /// Morning until noon, afternoon until 17:00, evening after.
-  String get greeting {
-    if (hour < 12) return 'Good morning';
-    if (hour < 17) return 'Good afternoon';
-    return 'Good evening';
+  /// Morning until noon, afternoon until 17:00, evening after. Localized
+  /// words are supplied by the caller, for the same reason as [dayLabel].
+  String greeting({
+    required String morning,
+    required String afternoon,
+    required String evening,
+  }) {
+    if (hour < 12) return morning;
+    if (hour < 17) return afternoon;
+    return evening;
   }
 
   /// Whole days from now, negative once the date is past.

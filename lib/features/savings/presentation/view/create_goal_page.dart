@@ -10,6 +10,7 @@ import 'package:novapay/core/constants/app_size.dart';
 import 'package:novapay/core/injections/injection.dart';
 import 'package:novapay/features/savings/presentation/cubit/create_goal_cubit.dart';
 import 'package:novapay/features/savings/presentation/widgets/savings_widgets.dart';
+import 'package:novapay/l10n/l10n.dart';
 
 class CreateGoalPage extends StatelessWidget {
   const new({super.key});
@@ -36,11 +37,12 @@ class CreateGoalView extends StatelessWidget {
           final cubit = context.read<CreateGoalCubit>();
           final draft = state.draft;
           final error = state is CreateGoalEditing ? state.error : null;
+          final l10n = context.l10n;
 
           return CustomScaffold(
-            title: 'New goal',
+            title: l10n.newGoalTitle,
             bottomBar: CustomButton(
-              label: 'Create goal',
+              label: l10n.createGoalButton,
               isLoading: state.isSubmitting,
               onPressed: draft.canSubmit ? cubit.submit : null,
             ),
@@ -50,14 +52,14 @@ class CreateGoalView extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   CustomInputField(
-                    label: 'What are you saving for?',
-                    hint: 'Rent, school fees, a trip',
+                    label: l10n.goalNameLabel,
+                    hint: l10n.goalNameHint,
                     autofocus: true,
                     onChanged: cubit.nameChanged,
                   ),
                   AppSize.h(AppSize.mdl),
                   CustomInputField(
-                    label: 'Target amount',
+                    label: l10n.targetAmountLabel,
                     hint: '0.00',
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
@@ -90,7 +92,7 @@ class CreateGoalView extends StatelessWidget {
                   ],
                   AppSize.h(AppSize.md),
                   Text(
-                    'Money only moves when you add to the goal, not now.',
+                    l10n.moneyMovesLaterNote,
                     style: Theme.of(context).textTheme.bodySmall
                         ?.copyWith(color: AppThemeColors.of(context).subtext),
                   ),

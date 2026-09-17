@@ -8,6 +8,7 @@ import 'package:novapay/core/constants/app_color.dart';
 import 'package:novapay/core/constants/app_size.dart';
 import 'package:novapay/core/extensions/date_time_extension.dart';
 import 'package:novapay/features/wallet/domain/entities/activity_item.dart';
+import 'package:novapay/l10n/l10n.dart';
 
 class TransactionDetailPage extends StatelessWidget {
   const new({required this.item, super.key});
@@ -18,10 +19,11 @@ class TransactionDetailPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
     final texts = Theme.of(context).textTheme;
-    final (label, tone) = _statusFor(item.status);
+    final l10n = context.l10n;
+    final (label, tone) = _statusFor(item.status, l10n);
 
     return CustomScaffold(
-      title: 'Transaction',
+      title: l10n.transactionTitle,
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -31,7 +33,7 @@ class TransactionDetailPage extends StatelessWidget {
               child: MoneyText(
                 amount: item.amount,
                 signed: true,
-                label: item.isDebit ? 'Sent' : 'Received',
+                label: item.isDebit ? l10n.sentLabel : l10n.receivedLabel,
                 style: texts.displayLarge?.copyWith(
                   color: item.isDebit ? colors.textHeading : AppColor.success,
                 ),
@@ -44,10 +46,19 @@ class TransactionDetailPage extends StatelessWidget {
             AppSize.h(AppSize.xl),
             SummaryCard(
               children: [
-                SummaryRow(label: 'Description', value: item.title),
-                SummaryRow(label: 'Date', value: item.occurredAt.dayLabel),
-                SummaryRow(label: 'Time', value: item.occurredAt.timeLabel),
-                SummaryRow(label: 'Reference', value: item.id),
+                SummaryRow(label: l10n.descriptionLabel, value: item.title),
+                SummaryRow(
+                  label: l10n.dateLabel,
+                  value: item.occurredAt.dayLabel(
+                    today: l10n.todayLabel,
+                    yesterday: l10n.yesterdayLabel,
+                  ),
+                ),
+                SummaryRow(
+                  label: l10n.timeLabel,
+                  value: item.occurredAt.timeLabel,
+                ),
+                SummaryRow(label: l10n.referenceLabel, value: item.id),
               ],
             ),
             if (item.note case final note?) ...[
@@ -64,10 +75,11 @@ class TransactionDetailPage extends StatelessWidget {
     );
   }
 
-  (String, ChipTone) _statusFor(ActivityStatus status) => switch (status) {
-    ActivityStatus.settled => ('Settled', ChipTone.success),
-    ActivityStatus.pending => ('Pending', ChipTone.pending),
-    ActivityStatus.rejected => ('Not sent', ChipTone.danger),
-    ActivityStatus.unresolved => ('Unresolved', ChipTone.pending),
-  };
+  (String, ChipTone) _statusFor(ActivityStatus status, AppLocalizations l10n) =>
+      switch (status) {
+        ActivityStatus.settled => (l10n.settledLabel, ChipTone.success),
+        ActivityStatus.pending => (l10n.pendingLabel, ChipTone.pending),
+        ActivityStatus.rejected => (l10n.notSentLabel, ChipTone.danger),
+        ActivityStatus.unresolved => (l10n.unresolvedLabel, ChipTone.pending),
+      };
 }

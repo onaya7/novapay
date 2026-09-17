@@ -127,9 +127,9 @@ void main() {
 
   testWidgets('the language toggle switches locale', (tester) async {
     await pump(tester, const ProfileState.ready(UserProfile()));
-    await tester.ensureVisible(find.text('French'));
+    await tester.ensureVisible(find.text('Français'));
 
-    await tester.tap(find.text('French'));
+    await tester.tap(find.text('Français'));
 
     verify(() => locale.setLocale(AppLocale.fr)).called(1);
   });

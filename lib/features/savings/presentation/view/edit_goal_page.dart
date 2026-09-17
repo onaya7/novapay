@@ -14,6 +14,7 @@ import 'package:novapay/features/savings/domain/entities/goal_draft.dart';
 import 'package:novapay/features/savings/domain/entities/savings_goal_item.dart';
 import 'package:novapay/features/savings/presentation/cubit/edit_goal_cubit.dart';
 import 'package:novapay/features/savings/presentation/widgets/savings_widgets.dart';
+import 'package:novapay/l10n/l10n.dart';
 
 class EditGoalPage extends StatelessWidget {
   const new({required this.goal, super.key});
@@ -45,9 +46,9 @@ class EditGoalView extends StatelessWidget {
         builder: (context, state) {
           final draft = state.draft;
           if (draft == null) {
-            return const CustomScaffold(
-              title: 'Edit goal',
-              body: LoadingIndicator(),
+            return CustomScaffold(
+              title: context.l10n.editGoalTitle,
+              body: const LoadingIndicator(),
             );
           }
           return _Form(state: state, draft: draft);
@@ -88,11 +89,12 @@ class _FormState extends State<_Form> {
     final draft = widget.draft;
     final state = widget.state;
     final error = state is EditGoalEditing ? state.error : null;
+    final l10n = context.l10n;
 
     return CustomScaffold(
-      title: 'Edit goal',
+      title: l10n.editGoalTitle,
       bottomBar: CustomButton(
-        label: 'Save changes',
+        label: l10n.saveChangesButton,
         isLoading: state.isSubmitting,
         onPressed: draft.canSubmit ? cubit.submit : null,
       ),
@@ -102,15 +104,15 @@ class _FormState extends State<_Form> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             CustomInputField(
-              label: 'What are you saving for?',
-              hint: 'Rent, school fees, a trip',
+              label: l10n.goalNameLabel,
+              hint: l10n.goalNameHint,
               controller: _nameController,
               autofocus: true,
               onChanged: cubit.nameChanged,
             ),
             AppSize.h(AppSize.mdl),
             CustomInputField(
-              label: 'Target amount',
+              label: l10n.targetAmountLabel,
               hint: '0.00',
               controller: _targetController,
               keyboardType: const TextInputType.numberWithOptions(

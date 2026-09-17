@@ -190,5 +190,367 @@
     "biometricConfirmButton": "Confirm & Send",
     "@biometricConfirmButton": {
         "description": "CTA on the biometric confirmation stub screen"
+    },
+    "savingsLabel": "Savings",
+    "@savingsLabel": {
+        "description": "Bottom nav tab label"
+    },
+    "activityLabel": "Activity",
+    "@activityLabel": {
+        "description": "Bottom nav tab label, the Activity page title, and the wallet's Activity section header"
+    },
+    "profileLabel": "Profile",
+    "@profileLabel": {
+        "description": "Bottom nav tab label and the Profile page title"
+    },
+    "newGoalTitle": "New goal",
+    "@newGoalTitle": {
+        "description": "App bar title, create-goal screen"
+    },
+    "createGoalButton": "Create goal",
+    "@createGoalButton": {
+        "description": "CTA creating a goal, on both the create-goal form and the goals list"
+    },
+    "goalNameLabel": "What are you saving for?",
+    "@goalNameLabel": {
+        "description": "Label on a goal's name field"
+    },
+    "goalNameHint": "Rent, school fees, a trip",
+    "@goalNameHint": {
+        "description": "Placeholder on a goal's name field"
+    },
+    "targetAmountLabel": "Target amount",
+    "@targetAmountLabel": {
+        "description": "Label on a goal's target amount field"
+    },
+    "moneyMovesLaterNote": "Money only moves when you add to the goal, not now.",
+    "@moneyMovesLaterNote": {
+        "description": "Reassurance line under the create-goal form"
+    },
+    "editGoalTitle": "Edit goal",
+    "@editGoalTitle": {
+        "description": "App bar title on the edit-goal screen, and the edit row in a goal's overflow menu"
+    },
+    "saveChangesButton": "Save changes",
+    "@saveChangesButton": {
+        "description": "CTA submitting an edited goal"
+    },
+    "novaSaveTitle": "NovaSave",
+    "@novaSaveTitle": {
+        "description": "App bar title, the goals list screen"
+    },
+    "noGoalsMessage": "No goals yet.\nA goal is money you set aside for something specific.",
+    "@noGoalsMessage": {
+        "description": "Empty state on the goals list"
+    },
+    "goalReachedLabel": "Reached",
+    "@goalReachedLabel": {
+        "description": "Badge on a goal card once its target is met"
+    },
+    "pendingLabel": "Pending",
+    "@pendingLabel": {
+        "description": "Badge or status label for a queued goal contribution or transaction"
+    },
+    "moreActionsTooltip": "More actions",
+    "@moreActionsTooltip": {
+        "description": "Tooltip on a goal card's overflow button"
+    },
+    "savedSoFarLabel": "Saved so far",
+    "@savedSoFarLabel": {
+        "description": "Label on the amount saved toward a goal"
+    },
+    "deleteGoalButton": "Delete goal",
+    "@deleteGoalButton": {
+        "description": "The delete row in a goal's overflow menu, and the confirm button on the delete sheet"
+    },
+    "deleteGoalConfirmTitle": "Delete \"{name}\"?",
+    "@deleteGoalConfirmTitle": {
+        "description": "Title on the delete-goal confirmation sheet",
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "deleteGoalConfirmBody": "This removes the goal for good. Anything already saved toward it returns to your wallet.",
+    "@deleteGoalConfirmBody": {
+        "description": "Body copy on the delete-goal confirmation sheet"
+    },
+    "keepGoalButton": "Keep goal",
+    "@keepGoalButton": {
+        "description": "CTA dismissing the delete-goal confirmation sheet"
+    },
+    "targetDateLabel": "Target date",
+    "@targetDateLabel": {
+        "description": "Label on a goal's target date field"
+    },
+    "chooseDateHint": "Choose a date",
+    "@chooseDateHint": {
+        "description": "Placeholder before a date is picked"
+    },
+    "doneButton": "Done",
+    "@doneButton": {
+        "description": "Confirms a picker, such as the adaptive date picker"
+    },
+    "addToGoalLabel": "Add to goal",
+    "@addToGoalLabel": {
+        "description": "App bar title and default CTA on the contribute-to-goal screen"
+    },
+    "addAmountButton": "Add {amount}",
+    "@addAmountButton": {
+        "description": "CTA naming the amount being added, on the contribute and add-money screens",
+        "placeholders": {
+            "amount": {
+                "type": "String"
+            }
+        }
+    },
+    "addingLabel": "Adding",
+    "@addingLabel": {
+        "description": "Label on the amount-entry figure, contribute and add-money screens"
+    },
+    "enterAmountToAddHelper": "Enter how much to add",
+    "@enterAmountToAddHelper": {
+        "description": "Helper text before an amount is entered, contribute and add-money screens"
+    },
+    "notEnoughAvailableHelper": "That is more than you have available",
+    "@notEnoughAvailableHelper": {
+        "description": "Helper text when a contribution exceeds what is available"
+    },
+    "amountLeftInWalletHelper": "{amount} left in your wallet",
+    "@amountLeftInWalletHelper": {
+        "description": "Helper text showing what remains in the wallet after a contribution",
+        "placeholders": {
+            "amount": {
+                "type": "String"
+            }
+        }
+    },
+    "backToGoalsButton": "Back to goals",
+    "@backToGoalsButton": {
+        "description": "CTA leaving the contribute receipt screen"
+    },
+    "queuedForGoalMessage": "{amount} is queued for {goal}. It is saved, so closing the app will not lose it.",
+    "@queuedForGoalMessage": {
+        "description": "Receipt body when a contribution is still pending",
+        "placeholders": {
+            "amount": {
+                "type": "String"
+            },
+            "goal": {
+                "type": "String"
+            }
+        }
+    },
+    "goalRowLabel": "Goal",
+    "@goalRowLabel": {
+        "description": "Row label, contribute receipt summary card"
+    },
+    "onItsWayHeadline": "On its way",
+    "@onItsWayHeadline": {
+        "description": "Receipt headline when a contribution or top-up is still pending"
+    },
+    "addMoneyTitle": "Add money",
+    "@addMoneyTitle": {
+        "description": "App bar title, add-money screen, and the wallet's Add money quick action"
+    },
+    "topUpTooMuchHelper": "One top-up cannot be more than {amount}",
+    "@topUpTooMuchHelper": {
+        "description": "Helper text when a top-up exceeds the per-transaction limit",
+        "placeholders": {
+            "amount": {
+                "type": "String"
+            }
+        }
+    },
+    "balanceBecomesHelper": "Your balance becomes {amount}",
+    "@balanceBecomesHelper": {
+        "description": "Helper text previewing the balance after a top-up",
+        "placeholders": {
+            "amount": {
+                "type": "String"
+            }
+        }
+    },
+    "walletBalanceLabel": "Wallet balance",
+    "@walletBalanceLabel": {
+        "description": "Row label naming the wallet's confirmed balance"
+    },
+    "afterTopUpLabel": "After this top-up",
+    "@afterTopUpLabel": {
+        "description": "Row label previewing the balance after a top-up"
+    },
+    "queuedForWalletMessage": "{amount} is queued for your wallet. It is saved, so closing the app will not lose it.",
+    "@queuedForWalletMessage": {
+        "description": "Receipt body when a top-up is still pending",
+        "placeholders": {
+            "amount": {
+                "type": "String"
+            }
+        }
+    },
+    "addYourNameLabel": "Add your name",
+    "@addYourNameLabel": {
+        "description": "Placeholder profile name before one is set"
+    },
+    "thisDeviceOnlyLabel": "This device only",
+    "@thisDeviceOnlyLabel": {
+        "description": "Note under the profile name"
+    },
+    "youSectionTitle": "YOU",
+    "@youSectionTitle": {
+        "description": "Section heading, profile screen"
+    },
+    "appearanceSectionTitle": "APPEARANCE",
+    "@appearanceSectionTitle": {
+        "description": "Section heading, profile screen"
+    },
+    "languageSectionTitle": "LANGUAGE",
+    "@languageSectionTitle": {
+        "description": "Section heading, profile screen"
+    },
+    "aboutSectionTitle": "ABOUT",
+    "@aboutSectionTitle": {
+        "description": "Section heading, profile screen"
+    },
+    "versionLabel": "Version",
+    "@versionLabel": {
+        "description": "Row label, profile About section"
+    },
+    "moneyModelLabel": "Money",
+    "@moneyModelLabel": {
+        "description": "Row label, profile About section"
+    },
+    "moneyModelValue": "Held as whole kobo",
+    "@moneyModelValue": {
+        "description": "Row value, profile About section"
+    },
+    "disclaimerText": "A fictional scenario built for evaluation. No real bank systems, customers or credentials are involved.",
+    "@disclaimerText": {
+        "description": "Footer disclaimer, profile screen"
+    },
+    "yourNameLabel": "Your name",
+    "@yourNameLabel": {
+        "description": "Label on the profile name field"
+    },
+    "yourNameHint": "What should the wallet call you?",
+    "@yourNameHint": {
+        "description": "Placeholder on the profile name field"
+    },
+    "yourNameHelper": "Saved on this device, never sent anywhere",
+    "@yourNameHelper": {
+        "description": "Helper text under the profile name field"
+    },
+    "systemLabel": "System",
+    "@systemLabel": {
+        "description": "Option following the device's own setting, on the theme and language toggles"
+    },
+    "lightLabel": "Light",
+    "@lightLabel": {
+        "description": "Light theme option"
+    },
+    "darkLabel": "Dark",
+    "@darkLabel": {
+        "description": "Dark theme option"
+    },
+    "noActivityMessage": "No activity yet.\nMoney you send or save shows up here.",
+    "@noActivityMessage": {
+        "description": "Empty state on the wallet home screen"
+    },
+    "noHistoryMessage": "Nothing here yet.\nMoney you send, add or save shows up here.",
+    "@noHistoryMessage": {
+        "description": "Empty state on the Activity tab"
+    },
+    "seeAllLabel": "See all",
+    "@seeAllLabel": {
+        "description": "Action on the wallet's Activity section header"
+    },
+    "availableBalanceLabel": "Available balance",
+    "@availableBalanceLabel": {
+        "description": "Label on the wallet's spendable balance"
+    },
+    "showBalanceTooltip": "Show balance",
+    "@showBalanceTooltip": {
+        "description": "Tooltip revealing the hidden balance"
+    },
+    "hideBalanceTooltip": "Hide balance",
+    "@hideBalanceTooltip": {
+        "description": "Tooltip hiding the visible balance"
+    },
+    "sendingSuffixLabel": "sending",
+    "@sendingSuffixLabel": {
+        "description": "Trailing word next to the pending amount on the balance card"
+    },
+    "sendActionLabel": "Send",
+    "@sendActionLabel": {
+        "description": "The wallet's Send quick action"
+    },
+    "saveActionLabel": "Save",
+    "@saveActionLabel": {
+        "description": "The wallet's Save quick action"
+    },
+    "historyActionLabel": "History",
+    "@historyActionLabel": {
+        "description": "The wallet's History quick action"
+    },
+    "notSentLabel": "Not sent",
+    "@notSentLabel": {
+        "description": "Status label for a rejected transaction"
+    },
+    "unresolvedLabel": "Unresolved",
+    "@unresolvedLabel": {
+        "description": "Status label for a transaction whose outcome is unknown"
+    },
+    "settledLabel": "Settled",
+    "@settledLabel": {
+        "description": "Status label for a settled transaction"
+    },
+    "todayLabel": "Today",
+    "@todayLabel": {
+        "description": "Relative day label for a transaction that occurred today"
+    },
+    "yesterdayLabel": "Yesterday",
+    "@yesterdayLabel": {
+        "description": "Relative day label for a transaction that occurred yesterday"
+    },
+    "goodMorningGreeting": "Good morning",
+    "@goodMorningGreeting": {
+        "description": "Wallet greeting before noon"
+    },
+    "goodAfternoonGreeting": "Good afternoon",
+    "@goodAfternoonGreeting": {
+        "description": "Wallet greeting from noon to 5pm"
+    },
+    "goodEveningGreeting": "Good evening",
+    "@goodEveningGreeting": {
+        "description": "Wallet greeting after 5pm"
+    },
+    "transactionTitle": "Transaction",
+    "@transactionTitle": {
+        "description": "App bar title, transaction detail screen"
+    },
+    "sentLabel": "Sent",
+    "@sentLabel": {
+        "description": "Label on a debit transaction's figure"
+    },
+    "receivedLabel": "Received",
+    "@receivedLabel": {
+        "description": "Label on a credit transaction's figure"
+    },
+    "descriptionLabel": "Description",
+    "@descriptionLabel": {
+        "description": "Row label, transaction detail"
+    },
+    "dateLabel": "Date",
+    "@dateLabel": {
+        "description": "Row label, transaction detail"
+    },
+    "timeLabel": "Time",
+    "@timeLabel": {
+        "description": "Row label, transaction detail"
+    },
+    "referenceLabel": "Reference",
+    "@referenceLabel": {
+        "description": "Row label, transaction detail"
     }
 }

@@ -12,6 +12,7 @@ import 'package:novapay/core/injections/injection.dart';
 import 'package:novapay/features/savings/domain/entities/savings_goal_item.dart';
 import 'package:novapay/features/savings/presentation/cubit/savings_cubit.dart';
 import 'package:novapay/features/savings/presentation/widgets/savings_widgets.dart';
+import 'package:novapay/l10n/l10n.dart';
 
 class SavingsPage extends StatelessWidget {
   const new({super.key});
@@ -35,10 +36,10 @@ class SavingsView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return CustomScaffold(
-      title: 'NovaSave',
+      title: context.l10n.novaSaveTitle,
       padding: EdgeInsets.zero,
       bottomBar: CustomButton(
-        label: 'Create goal',
+        label: context.l10n.createGoalButton,
         leading: const Icon(Icons.add, size: AppSize.iconMd),
         onPressed: () => _openCreate(context),
       ),
@@ -101,12 +102,10 @@ class _Ready extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (goals.isEmpty) {
-      return const PullToRefreshBody(
+      return PullToRefreshBody(
         alignment: Alignment.center,
         child: AppEmptyState(
-          message:
-              'No goals yet.\n'
-              'A goal is money you set aside for something specific.',
+          message: context.l10n.noGoalsMessage,
           icon: Icons.savings_outlined,
         ),
       );

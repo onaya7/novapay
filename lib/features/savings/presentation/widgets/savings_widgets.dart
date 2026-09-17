@@ -1,3 +1,4 @@
+import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:novapay/config/theme/app_theme_colors.dart';
 import 'package:novapay/core/components/custom_button.dart';
@@ -7,6 +8,7 @@ import 'package:novapay/core/components/status_chip.dart';
 import 'package:novapay/core/constants/app_color.dart';
 import 'package:novapay/core/constants/app_size.dart';
 import 'package:novapay/features/savings/domain/entities/savings_goal_item.dart';
+import 'package:novapay/l10n/l10n.dart';
 
 /// The bar, plus the percentage in words beside it. The percentage is computed
 /// in integers; the fraction is one-way into the bar and never read back.
@@ -107,9 +109,15 @@ class GoalCard extends StatelessWidget {
                     ),
                   ),
                   if (goal.isComplete)
-                    const StatusChip(label: 'Reached', tone: ChipTone.success)
+                    StatusChip(
+                      label: context.l10n.goalReachedLabel,
+                      tone: ChipTone.success,
+                    )
                   else if (goal.hasPending)
-                    const StatusChip(label: 'Pending', tone: ChipTone.pending),
+                    StatusChip(
+                      label: context.l10n.pendingLabel,
+                      tone: ChipTone.pending,
+                    ),
                   _MoreButton(onTap: onMore),
                 ],
               ),
@@ -133,7 +141,7 @@ class _MoreButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
     return Tooltip(
-      message: 'More actions',
+      message: context.l10n.moreActionsTooltip,
       child: Material(
         color: Colors.transparent,
         child: InkWell(
@@ -176,13 +184,13 @@ class GoalSummaryHeader extends StatelessWidget {
           Row(
             children: [
               Text(
-                'Saved so far',
+                context.l10n.savedSoFarLabel,
                 style: texts.bodySmall?.copyWith(color: colors.textSubheading),
               ),
               const Spacer(),
               MoneyText(
                 amount: goal.saved,
-                label: 'Saved so far',
+                label: context.l10n.savedSoFarLabel,
                 style: texts.labelLarge,
               ),
             ],
@@ -222,6 +230,8 @@ class GoalActionsSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
     return SafeArea(
       top: false,
       child: Padding(
@@ -233,12 +243,12 @@ class GoalActionsSheet extends StatelessWidget {
             const _SheetHandle(),
             _ActionTile(
               icon: Icons.edit_outlined,
-              label: 'Edit goal',
+              label: l10n.editGoalTitle,
               onTap: () => Navigator.of(context).pop(GoalAction.edit),
             ),
             _ActionTile(
               icon: Icons.delete_outline,
-              label: 'Delete goal',
+              label: l10n.deleteGoalButton,
               isDestructive: true,
               onTap: () => Navigator.of(context).pop(GoalAction.delete),
             ),
@@ -259,6 +269,7 @@ class DeleteGoalConfirmSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
     final texts = Theme.of(context).textTheme;
+    final l10n = context.l10n;
 
     return SafeArea(
       top: false,
@@ -269,22 +280,24 @@ class DeleteGoalConfirmSheet extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const _SheetHandle(),
-            Text('Delete "$goalName"?', style: texts.titleLarge),
+            Text(
+              l10n.deleteGoalConfirmTitle(goalName),
+              style: texts.titleLarge,
+            ),
             AppSize.h(AppSize.sm),
             Text(
-              'This removes the goal for good. Anything already saved '
-              'toward it returns to your wallet.',
+              l10n.deleteGoalConfirmBody,
               style: texts.bodyMedium?.copyWith(color: colors.subtext),
             ),
             AppSize.h(AppSize.lg),
             CustomButton(
-              label: 'Delete goal',
+              label: l10n.deleteGoalButton,
               variant: ButtonVariant.secondary,
               onPressed: () => Navigator.of(context).pop(true),
             ),
             AppSize.h(AppSize.sm),
             CustomButton(
-              label: 'Keep goal',
+              label: l10n.keepGoalButton,
               variant: ButtonVariant.plain,
               onPressed: () => Navigator.of(context).pop(false),
             ),
@@ -357,23 +370,26 @@ class _ActionTile extends StatelessWidget {
   }
 }
 
-/// A tap-to-pick date field, styled like the app's other inputs.
+/// A tap-to-pick date field, styled like the app's other inputs. The picker
+/// itself is adaptive: a Cupertino wheel on iOS/macOS, Material's calendar
+/// elsewhere, since material_ui has no single picker that switches itself.
 class GoalDateField extends StatelessWidget {
   const new({
     required this.value,
     required this.onChanged,
-    this.label = 'Target date',
+    this.label,
     super.key,
   });
 
   final DateTime? value;
   final ValueChanged<DateTime> onChanged;
-  final String label;
+  final String? label;
 
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
     final texts = Theme.of(context).textTheme;
+    final l10n = context.l10n;
     final chosen = value;
 
     return Column(
@@ -381,7 +397,7 @@ class GoalDateField extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          label,
+          label ?? l10n.targetDateLabel,
           style: texts.labelLarge?.copyWith(color: colors.textSubheading),
         ),
         AppSize.h(AppSize.sm),
@@ -404,7 +420,7 @@ class GoalDateField extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      chosen == null ? 'Choose a date' : _format(chosen),
+                      chosen == null ? l10n.chooseDateHint : _format(chosen),
                       style: texts.bodyLarge?.copyWith(
                         color: chosen == null
                             ? colors.subtext
@@ -446,14 +462,67 @@ class GoalDateField extends StatelessWidget {
 
   Future<void> _pick(BuildContext context) async {
     final now = DateTime.now();
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: value ?? now.add(const Duration(days: 30)),
-      // A savings target is always ahead; the default last date is today,
-      // which would block every valid choice.
-      firstDate: now,
-      lastDate: DateTime(now.year + 10, now.month, now.day),
-    );
+    final initialDate = value ?? now.add(const Duration(days: 30));
+    // A savings target is always ahead; the default last date is today,
+    // which would block every valid choice.
+    final firstDate = now;
+    final lastDate = DateTime(now.year + 10, now.month, now.day);
+    final isCupertino = switch (Theme.of(context).platform) {
+      TargetPlatform.iOS || TargetPlatform.macOS => true,
+      _ => false,
+    };
+
+    final picked = isCupertino
+        ? await _pickCupertino(context, initialDate, firstDate, lastDate)
+        : await showDatePicker(
+            context: context,
+            initialDate: initialDate,
+            firstDate: firstDate,
+            lastDate: lastDate,
+          );
     if (picked != null) onChanged(picked);
+  }
+
+  Future<DateTime?> _pickCupertino(
+    BuildContext context,
+    DateTime initialDate,
+    DateTime firstDate,
+    DateTime lastDate,
+  ) {
+    final l10n = context.l10n;
+    var selected = initialDate;
+    return showCupertinoModalPopup<DateTime>(
+      context: context,
+      builder: (sheetContext) => Container(
+        height: 280,
+        color: CupertinoColors.systemBackground.resolveFrom(sheetContext),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                CupertinoButton(
+                  onPressed: () => Navigator.of(sheetContext).pop(),
+                  child: Text(l10n.cancelButton),
+                ),
+                CupertinoButton(
+                  onPressed: () => Navigator.of(sheetContext).pop(selected),
+                  child: Text(l10n.doneButton),
+                ),
+              ],
+            ),
+            Expanded(
+              child: CupertinoDatePicker(
+                mode: CupertinoDatePickerMode.date,
+                initialDateTime: initialDate,
+                minimumDate: firstDate,
+                maximumDate: lastDate,
+                onDateTimeChanged: (value) => selected = value,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

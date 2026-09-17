@@ -16,6 +16,7 @@ import 'package:novapay/core/injections/injection.dart';
 import 'package:novapay/core/money/money.dart';
 import 'package:novapay/features/funding/domain/entities/funding_draft.dart';
 import 'package:novapay/features/funding/presentation/cubit/add_money_cubit.dart';
+import 'package:novapay/l10n/l10n.dart';
 
 class AddMoneyPage extends StatelessWidget {
   const new({super.key});
@@ -42,9 +43,9 @@ class AddMoneyView extends StatelessWidget {
       builder: (context, state) {
         final draft = state.draft;
         if (draft == null) {
-          return const CustomScaffold(
-            title: 'Add money',
-            body: LoadingIndicator(),
+          return CustomScaffold(
+            title: context.l10n.addMoneyTitle,
+            body: const LoadingIndicator(),
           );
         }
         if (state is AddMoneyDone) return _Done(draft: draft);
@@ -87,13 +88,14 @@ class _FormState extends State<_Form> {
     final draft = widget.draft;
     final state = widget.state;
     final error = state is AddMoneyEditing ? state.error : null;
+    final l10n = context.l10n;
 
     return CustomScaffold(
-      title: 'Add money',
+      title: l10n.addMoneyTitle,
       bottomBar: CustomButton(
         label: draft.amountIsEntered
-            ? 'Add ${draft.amount.format()}'
-            : 'Add money',
+            ? l10n.addAmountButton(draft.amount.format())
+            : l10n.addMoneyTitle,
         isLoading: state.isSubmitting,
         onPressed: draft.canSubmit ? cubit.submit : null,
       ),
@@ -104,13 +106,13 @@ class _FormState extends State<_Form> {
           children: [
             AmountDisplay(
               amount: draft.amount,
-              label: 'Adding',
-              helper: _helper(draft),
+              label: l10n.addingLabel,
+              helper: _helper(context, draft),
               hasError: draft.amountIsEntered && !draft.withinLimit,
             ),
             AppSize.h(AppSize.lg),
             CustomInputField(
-              label: 'Amount',
+              label: l10n.amountLabel,
               hint: '0.00',
               controller: _controller,
               keyboardType: const TextInputType.numberWithOptions(
@@ -141,11 +143,11 @@ class _FormState extends State<_Form> {
             SummaryCard(
               children: [
                 SummaryRow(
-                  label: 'Wallet balance',
+                  label: l10n.walletBalanceLabel,
                   value: draft.balance.format(),
                 ),
                 SummaryRow(
-                  label: 'After this top-up',
+                  label: l10n.afterTopUpLabel,
                   value: draft.projected.format(),
                   emphasised: true,
                 ),
@@ -165,12 +167,13 @@ class _FormState extends State<_Form> {
     );
   }
 
-  String _helper(FundingDraft draft) {
-    if (!draft.amountIsEntered) return 'Enter how much to add';
+  String _helper(BuildContext context, FundingDraft draft) {
+    final l10n = context.l10n;
+    if (!draft.amountIsEntered) return l10n.enterAmountToAddHelper;
     if (!draft.withinLimit) {
-      return 'One top-up cannot be more than ${kMaxTopUp.format()}';
+      return l10n.topUpTooMuchHelper(kMaxTopUp.format());
     }
-    return 'Your balance becomes ${draft.projected.format()}';
+    return l10n.balanceBecomesHelper(draft.projected.format());
   }
 }
 
@@ -183,12 +186,13 @@ class _Done extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
     final texts = Theme.of(context).textTheme;
+    final l10n = context.l10n;
 
     return CustomScaffold(
-      title: 'Queued',
+      title: l10n.queuedTitle,
       showBackButton: false,
       bottomBar: CustomButton(
-        label: 'Back to wallet',
+        label: l10n.backToWalletButton,
         onPressed: () => context.pop(),
       ),
       body: SingleChildScrollView(
@@ -214,14 +218,13 @@ class _Done extends StatelessWidget {
             ),
             AppSize.h(AppSize.lg),
             Text(
-              'On its way',
+              l10n.onItsWayHeadline,
               style: texts.headlineMedium,
               textAlign: TextAlign.center,
             ),
             AppSize.h(AppSize.sm),
             Text(
-              '${draft.amount.format()} is queued for your wallet. '
-              'It is saved, so closing the app will not lose it.',
+              l10n.queuedForWalletMessage(draft.amount.format()),
               textAlign: TextAlign.center,
               style: texts.bodyMedium?.copyWith(color: colors.textSubheading),
             ),
@@ -229,7 +232,7 @@ class _Done extends StatelessWidget {
             SummaryCard(
               children: [
                 SummaryRow(
-                  label: 'Amount',
+                  label: l10n.amountLabel,
                   value: draft.amount.format(),
                   emphasised: true,
                 ),

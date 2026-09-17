@@ -128,3 +128,12 @@ first `showModalBottomSheet` in this app — there is no shared sheet component 
 convention: wrap the sheet's own content in `SafeArea(top: false)`, because
 `showModalBottomSheet`'s default `useSafeArea: false` only strips top padding via
 `MediaQuery.removePadding`, not the bottom gesture-bar inset.
+
+## Adaptive pickers
+`GoalDateField` (`lib/features/savings/presentation/widgets/savings_widgets.dart`) is the first
+platform-adaptive widget in this app, and the pattern for the next one: branch on
+`Theme.of(context).platform` (`TargetPlatform.iOS`/`.macOS`), and reach for `package:cupertino_ui`
+— a direct dependency, not transitive-only — for the non-Material path, since material_ui has no
+`.adaptive` picker of its own. A Cupertino wheel has no built-in confirm step, so it goes inside
+`showCupertinoModalPopup` with a manual Cancel/Done header row, staging the pick in a local variable
+until Done is tapped rather than applying `onDateTimeChanged` immediately.

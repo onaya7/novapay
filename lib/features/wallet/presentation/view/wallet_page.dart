@@ -16,6 +16,7 @@ import 'package:novapay/features/wallet/domain/entities/wallet_snapshot.dart';
 import 'package:novapay/features/wallet/presentation/cubit/wallet_cubit.dart';
 import 'package:novapay/features/wallet/presentation/widgets/wallet_widgets.dart';
 import 'package:novapay/gen/assets.gen.dart';
+import 'package:novapay/l10n/l10n.dart';
 
 class WalletPage extends StatelessWidget {
   const new({super.key});
@@ -107,10 +108,8 @@ class _Ready extends StatelessWidget {
               child: _Header(snapshot: snapshot, showActivityLabel: false),
             ),
             AppSize.h(AppSize.lg),
-            const AppEmptyState(
-              message:
-                  'No activity yet.\n'
-                  'Money you send or save shows up here.',
+            AppEmptyState(
+              message: context.l10n.noActivityMessage,
               icon: Icons.receipt_long,
             ),
           ],
@@ -153,12 +152,18 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         WalletHeader(
           title: context.watch<ProfileCubit>().state.profile.greetingName,
-          greeting: DateTime.now().greeting,
+          greeting: DateTime.now().greeting(
+            morning: l10n.goodMorningGreeting,
+            afternoon: l10n.goodAfternoonGreeting,
+            evening: l10n.goodEveningGreeting,
+          ),
           avatar: Assets.images.profile.provider(),
         ),
         AppSize.h(AppSize.md),
@@ -173,8 +178,8 @@ class _Header extends StatelessWidget {
         if (showActivityLabel) ...[
           AppSize.h(AppSize.lg),
           SectionHeader(
-            title: 'Activity',
-            actionLabel: 'See all',
+            title: l10n.activityLabel,
+            actionLabel: l10n.seeAllLabel,
             onAction: () => _goToTab(context, 2),
           ),
         ],

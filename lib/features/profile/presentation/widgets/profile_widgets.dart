@@ -5,6 +5,7 @@ import 'package:novapay/app/presentation/cubit/theme_cubit.dart';
 import 'package:novapay/app/view/app.dart';
 import 'package:novapay/config/theme/app_theme_colors.dart';
 import 'package:novapay/core/constants/app_size.dart';
+import 'package:novapay/l10n/l10n.dart';
 
 /// A labelled row in a settings group.
 class SettingsRow extends StatelessWidget {
@@ -98,6 +99,7 @@ class ThemeModeToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return BlocBuilder<ThemeCubit, AppThemeMode>(
       builder: (context, mode) => SegmentedButton<AppThemeMode>(
         showSelectedIcon: false,
@@ -105,7 +107,7 @@ class ThemeModeToggle extends StatelessWidget {
           for (final option in AppThemeMode.values)
             ButtonSegment<AppThemeMode>(
               value: option,
-              label: Text(option.label),
+              label: Text(option.label(l10n)),
             ),
         ],
         selected: {mode},
@@ -122,12 +124,16 @@ class LocaleToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return BlocBuilder<LocaleCubit, AppLocale>(
       builder: (context, locale) => SegmentedButton<AppLocale>(
         showSelectedIcon: false,
         segments: [
           for (final option in AppLocale.values)
-            ButtonSegment<AppLocale>(value: option, label: Text(option.label)),
+            ButtonSegment<AppLocale>(
+              value: option,
+              label: Text(option.label(l10n)),
+            ),
         ],
         selected: {locale},
         onSelectionChanged: (selection) =>

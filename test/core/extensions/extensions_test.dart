@@ -86,10 +86,12 @@ void main() {
 
     test('labels a row the way a statement does', () {
       final now = DateTime.now();
-      expect(now.dayLabel, 'Today');
-      expect(now.subtract(const Duration(days: 1)).dayLabel, 'Yesterday');
-      expect(DateTime(now.year, 1, 14).dayLabel, '14 Jan');
-      expect(DateTime(2020, 1, 14).dayLabel, '14 Jan 2020');
+      String label(DateTime date) =>
+          date.dayLabel(today: 'Today', yesterday: 'Yesterday');
+      expect(label(now), 'Today');
+      expect(label(now.subtract(const Duration(days: 1))), 'Yesterday');
+      expect(label(DateTime(now.year, 1, 14)), '14 Jan');
+      expect(label(DateTime(2020, 1, 14)), '14 Jan 2020');
     });
 
     test('shows a clock time', () {
@@ -104,12 +106,17 @@ void main() {
     });
 
     test('greets by the hour, not by whatever hour the suite runs at', () {
-      expect(DateTime(2026, 9, 16, 6).greeting, 'Good morning');
-      expect(DateTime(2026, 9, 16, 11, 59).greeting, 'Good morning');
-      expect(DateTime(2026, 9, 16, 12).greeting, 'Good afternoon');
-      expect(DateTime(2026, 9, 16, 16, 59).greeting, 'Good afternoon');
-      expect(DateTime(2026, 9, 16, 17).greeting, 'Good evening');
-      expect(DateTime(2026, 9, 16, 23).greeting, 'Good evening');
+      String greet(DateTime time) => time.greeting(
+        morning: 'Good morning',
+        afternoon: 'Good afternoon',
+        evening: 'Good evening',
+      );
+      expect(greet(DateTime(2026, 9, 16, 6)), 'Good morning');
+      expect(greet(DateTime(2026, 9, 16, 11, 59)), 'Good morning');
+      expect(greet(DateTime(2026, 9, 16, 12)), 'Good afternoon');
+      expect(greet(DateTime(2026, 9, 16, 16, 59)), 'Good afternoon');
+      expect(greet(DateTime(2026, 9, 16, 17)), 'Good evening');
+      expect(greet(DateTime(2026, 9, 16, 23)), 'Good evening');
     });
   });
 }

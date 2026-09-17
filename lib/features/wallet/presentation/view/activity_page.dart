@@ -11,6 +11,7 @@ import 'package:novapay/core/injections/injection.dart';
 import 'package:novapay/features/wallet/domain/entities/activity_item.dart';
 import 'package:novapay/features/wallet/presentation/cubit/wallet_cubit.dart';
 import 'package:novapay/features/wallet/presentation/widgets/wallet_widgets.dart';
+import 'package:novapay/l10n/l10n.dart';
 
 /// The full history. It reads the same snapshot the wallet does, so a queued
 /// action appears in both without a second source of truth.
@@ -36,7 +37,7 @@ class ActivityView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return CustomScaffold(
-      title: 'Activity',
+      title: context.l10n.activityLabel,
       showBackButton: false,
       padding: EdgeInsets.zero,
       body: RefreshIndicator(
@@ -92,12 +93,10 @@ class _Rows extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (rows.isEmpty) {
-      return const PullToRefreshBody(
+      return PullToRefreshBody(
         alignment: Alignment.center,
         child: AppEmptyState(
-          message:
-              'Nothing here yet.\n'
-              'Money you send, add or save shows up here.',
+          message: context.l10n.noHistoryMessage,
           icon: Icons.receipt_long,
         ),
       );

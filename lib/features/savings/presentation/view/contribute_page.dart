@@ -18,6 +18,7 @@ import 'package:novapay/features/savings/domain/entities/contribution_draft.dart
 import 'package:novapay/features/savings/domain/entities/savings_goal_item.dart';
 import 'package:novapay/features/savings/presentation/cubit/contribute_cubit.dart';
 import 'package:novapay/features/savings/presentation/widgets/savings_widgets.dart';
+import 'package:novapay/l10n/l10n.dart';
 
 class ContributePage extends StatelessWidget {
   const new({required this.goal, super.key});
@@ -46,9 +47,9 @@ class ContributeView extends StatelessWidget {
       builder: (context, state) {
         final draft = state.draft;
         if (draft == null) {
-          return const CustomScaffold(
-            title: 'Add to goal',
-            body: LoadingIndicator(),
+          return CustomScaffold(
+            title: context.l10n.addToGoalLabel,
+            body: const LoadingIndicator(),
           );
         }
         if (state is ContributeDone) return _Done(draft: draft);
@@ -91,6 +92,7 @@ class _FormState extends State<_Form> {
     final draft = widget.draft;
     final state = widget.state;
     final error = state is ContributeEditing ? state.error : null;
+    final l10n = context.l10n;
     final presets = <Money>[
       const Money.fromKobo(100000),
       const Money.fromKobo(500000),
@@ -98,11 +100,11 @@ class _FormState extends State<_Form> {
     ];
 
     return CustomScaffold(
-      title: 'Add to goal',
+      title: l10n.addToGoalLabel,
       bottomBar: CustomButton(
         label: draft.amountIsEntered
-            ? 'Add ${draft.amount.format()}'
-            : 'Add to goal',
+            ? l10n.addAmountButton(draft.amount.format())
+            : l10n.addToGoalLabel,
         isLoading: state.isSubmitting,
         onPressed: draft.canSubmit ? cubit.submit : null,
       ),
@@ -115,13 +117,13 @@ class _FormState extends State<_Form> {
             AppSize.h(AppSize.xl),
             AmountDisplay(
               amount: draft.amount,
-              label: 'Adding',
-              helper: _helper(draft),
+              label: l10n.addingLabel,
+              helper: _helper(context, draft),
               hasError: draft.amountIsEntered && !draft.hasEnough,
             ),
             AppSize.h(AppSize.lg),
             CustomInputField(
-              label: 'Amount',
+              label: l10n.amountLabel,
               hint: '0.00',
               controller: _controller,
               keyboardType: const TextInputType.numberWithOptions(
@@ -158,10 +160,11 @@ class _FormState extends State<_Form> {
     );
   }
 
-  String _helper(ContributionDraft draft) {
-    if (!draft.amountIsEntered) return 'Enter how much to add';
-    if (!draft.hasEnough) return 'That is more than you have available';
-    return '${draft.remaining.format()} left in your wallet';
+  String _helper(BuildContext context, ContributionDraft draft) {
+    final l10n = context.l10n;
+    if (!draft.amountIsEntered) return l10n.enterAmountToAddHelper;
+    if (!draft.hasEnough) return l10n.notEnoughAvailableHelper;
+    return l10n.amountLeftInWalletHelper(draft.remaining.format());
   }
 }
 
@@ -174,12 +177,13 @@ class _Done extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
     final texts = Theme.of(context).textTheme;
+    final l10n = context.l10n;
 
     return CustomScaffold(
-      title: 'Queued',
+      title: l10n.queuedTitle,
       showBackButton: false,
       bottomBar: CustomButton(
-        label: 'Back to goals',
+        label: l10n.backToGoalsButton,
         onPressed: () => context.pop(),
       ),
       body: SingleChildScrollView(
@@ -205,24 +209,23 @@ class _Done extends StatelessWidget {
             ),
             AppSize.h(AppSize.lg),
             Text(
-              'On its way',
+              l10n.onItsWayHeadline,
               style: texts.headlineMedium,
               textAlign: TextAlign.center,
             ),
             AppSize.h(AppSize.sm),
             Text(
               // It is queued, not settled, so this never claims it has landed.
-              '${draft.amount.format()} is queued for ${draft.goal.name}. '
-              'It is saved, so closing the app will not lose it.',
+              l10n.queuedForGoalMessage(draft.amount.format(), draft.goal.name),
               textAlign: TextAlign.center,
               style: texts.bodyMedium?.copyWith(color: colors.textSubheading),
             ),
             AppSize.h(AppSize.lg),
             SummaryCard(
               children: [
-                SummaryRow(label: 'Goal', value: draft.goal.name),
+                SummaryRow(label: l10n.goalRowLabel, value: draft.goal.name),
                 SummaryRow(
-                  label: 'Amount',
+                  label: l10n.amountLabel,
                   value: draft.amount.format(),
                   emphasised: true,
                 ),

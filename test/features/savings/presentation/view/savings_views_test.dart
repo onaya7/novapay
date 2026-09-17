@@ -1,8 +1,10 @@
 import 'package:bloc_test/bloc_test.dart';
+import 'package:cupertino_ui/cupertino_ui.dart' show CupertinoDatePicker;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:novapay/config/theme/app_theme.dart';
 import 'package:novapay/config/theme/app_theme_colors.dart';
 import 'package:novapay/core/components/custom_button.dart';
 import 'package:novapay/core/components/state_widgets.dart';
@@ -458,6 +460,49 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(calls, 0);
+    });
+
+    testWidgets('on iOS, tapping opens the Cupertino wheel instead', (
+      tester,
+    ) async {
+      DateTime? chosen;
+      await tester.pumpApp(
+        GoalDateField(
+          value: DateTime(2027, 6, 15),
+          onChanged: (value) => chosen = value,
+        ),
+        theme: AppTheme.light.copyWith(platform: TargetPlatform.iOS),
+      );
+
+      await tester.tap(find.text('15 Jun 2027'));
+      await tester.pumpAndSettle();
+      expect(find.byType(CupertinoDatePicker), findsOneWidget);
+
+      // Scrolling a wheel before confirming exercises onDateTimeChanged,
+      // which stages the pick rather than applying it immediately.
+      await tester.drag(find.byType(CupertinoDatePicker), const Offset(0, -50));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Done'));
+      await tester.pumpAndSettle();
+
+      expect(chosen, isNotNull);
+    });
+
+    testWidgets('on iOS, Cancel changes nothing', (tester) async {
+      var calls = 0;
+      await tester.pumpApp(
+        GoalDateField(value: null, onChanged: (_) => calls++),
+        theme: AppTheme.light.copyWith(platform: TargetPlatform.iOS),
+      );
+
+      await tester.tap(find.text('Choose a date'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+
+      expect(calls, 0);
+      expect(find.byType(CupertinoDatePicker), findsNothing);
     });
   });
 

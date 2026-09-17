@@ -10,6 +10,7 @@ import 'package:novapay/core/constants/app_size.dart';
 import 'package:novapay/core/extensions/date_time_extension.dart';
 import 'package:novapay/features/wallet/domain/entities/activity_item.dart';
 import 'package:novapay/features/wallet/domain/entities/wallet_snapshot.dart';
+import 'package:novapay/l10n/l10n.dart';
 
 /// The greeting strip above the balance card. `title` falls back to naming
 /// the surface when there is no local display name to greet.
@@ -68,6 +69,7 @@ class _BalanceCardState extends State<BalanceCard> {
   Widget build(BuildContext context) {
     final texts = Theme.of(context).textTheme;
     final snapshot = widget.snapshot;
+    final l10n = context.l10n;
 
     return Container(
       width: double.infinity,
@@ -83,7 +85,7 @@ class _BalanceCardState extends State<BalanceCard> {
           Row(
             children: [
               Text(
-                'Available balance',
+                l10n.availableBalanceLabel,
                 style: texts.bodySmall?.copyWith(color: AppColor.onBrand),
               ),
               AppSize.w(AppSize.sm),
@@ -108,7 +110,7 @@ class _BalanceCardState extends State<BalanceCard> {
                   )
                 : MoneyText(
                     amount: snapshot.available,
-                    label: 'Available balance',
+                    label: l10n.availableBalanceLabel,
                     style: texts.displayMedium?.copyWith(
                       color: AppColor.onBrand,
                     ),
@@ -125,7 +127,7 @@ class _BalanceCardState extends State<BalanceCard> {
             Row(
               children: [
                 Text(
-                  'Wallet balance',
+                  l10n.walletBalanceLabel,
                   style: texts.bodySmall?.copyWith(color: AppColor.onBrand),
                 ),
                 const Spacer(),
@@ -137,7 +139,7 @@ class _BalanceCardState extends State<BalanceCard> {
                 else
                   MoneyText(
                     amount: snapshot.confirmed,
-                    label: 'Wallet balance',
+                    label: l10n.walletBalanceLabel,
                     style: texts.labelLarge?.copyWith(color: AppColor.onBrand),
                   ),
               ],
@@ -164,7 +166,9 @@ class _HideToggle extends StatelessWidget {
         onPressed: () => onChanged(!hidden),
         iconSize: AppSize.iconMd,
         color: AppColor.onBrand,
-        tooltip: hidden ? 'Show balance' : 'Hide balance',
+        tooltip: hidden
+            ? context.l10n.showBalanceTooltip
+            : context.l10n.hideBalanceTooltip,
         icon: Icon(hidden ? Icons.visibility_off : Icons.visibility),
       ),
     );
@@ -179,6 +183,7 @@ class _PendingPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final texts = Theme.of(context).textTheme;
+    final l10n = context.l10n;
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSize.smd,
@@ -199,12 +204,12 @@ class _PendingPill extends StatelessWidget {
           AppSize.w(AppSize.sm),
           MoneyText(
             amount: snapshot.pending,
-            label: 'Sending',
+            label: l10n.sendingLabel,
             style: texts.labelMedium?.copyWith(color: AppColor.onBrand),
           ),
           AppSize.w(AppSize.xs),
           Text(
-            'sending',
+            l10n.sendingSuffixLabel,
             style: texts.labelMedium?.copyWith(color: AppColor.onBrand),
           ),
         ],
@@ -230,18 +235,27 @@ class WalletActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return QuickActionRow(
       tiles: [
-        QuickActionTile(icon: Icons.arrow_upward, label: 'Send', onTap: onSend),
-        QuickActionTile(icon: Icons.add, label: 'Add money', onTap: onAddMoney),
+        QuickActionTile(
+          icon: Icons.arrow_upward,
+          label: l10n.sendActionLabel,
+          onTap: onSend,
+        ),
+        QuickActionTile(
+          icon: Icons.add,
+          label: l10n.addMoneyTitle,
+          onTap: onAddMoney,
+        ),
         QuickActionTile(
           icon: Icons.savings_outlined,
-          label: 'Save',
+          label: l10n.saveActionLabel,
           onTap: onSave,
         ),
         QuickActionTile(
           icon: Icons.receipt_long_outlined,
-          label: 'History',
+          label: l10n.historyActionLabel,
           onTap: onHistory,
         ),
       ],
@@ -260,6 +274,11 @@ class ActivityRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
     final texts = Theme.of(context).textTheme;
+    final l10n = context.l10n;
+    final day = item.occurredAt.dayLabel(
+      today: l10n.todayLabel,
+      yesterday: l10n.yesterdayLabel,
+    );
 
     return Material(
       color: colors.cards,
@@ -282,11 +301,10 @@ class ActivityRow extends StatelessWidget {
                     Text(item.title, style: texts.labelLarge),
                     AppSize.h(AppSize.xs),
                     Text(
-                      '${item.occurredAt.dayLabel} · '
-                      '${item.occurredAt.timeLabel}',
+                      '$day · ${item.occurredAt.timeLabel}',
                       style: texts.bodySmall?.copyWith(color: colors.subtext),
                     ),
-                    if (_chipFor(item.status) case (
+                    if (_chipFor(item.status, l10n) case (
                       final label,
                       final tone,
                     )) ...[
@@ -324,12 +342,13 @@ class ActivityRow extends StatelessWidget {
 /// Null for a settled row: a list where every row is badged has no signal in
 /// the badge. Word and tone come from one place so they cannot drift apart —
 /// and an unknown outcome is not a failure, so it is not painted like one.
-(String, ChipTone)? _chipFor(ActivityStatus status) => switch (status) {
-  ActivityStatus.settled => null,
-  ActivityStatus.pending => ('Pending', ChipTone.pending),
-  ActivityStatus.rejected => ('Not sent', ChipTone.danger),
-  ActivityStatus.unresolved => ('Unresolved', ChipTone.pending),
-};
+(String, ChipTone)? _chipFor(ActivityStatus status, AppLocalizations l10n) =>
+    switch (status) {
+      ActivityStatus.settled => null,
+      ActivityStatus.pending => (l10n.pendingLabel, ChipTone.pending),
+      ActivityStatus.rejected => (l10n.notSentLabel, ChipTone.danger),
+      ActivityStatus.unresolved => (l10n.unresolvedLabel, ChipTone.pending),
+    };
 
 class _Avatar extends StatelessWidget {
   const _Avatar({required this.item});
