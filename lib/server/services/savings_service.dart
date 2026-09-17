@@ -25,6 +25,19 @@ abstract class SavingsService {
     required String goalId,
     required int amountKobo,
   });
+
+  /// Throws [ApiException] when the goal is gone or the edit is not valid.
+  Future<SavingsGoal> updateGoal({
+    required String goalId,
+    required String name,
+    required int targetKobo,
+    required DateTime targetDate,
+  });
+
+  /// Refunds whatever was saved back to the wallet, then removes the goal.
+  ///
+  /// Throws [ApiException] when the goal is gone.
+  Future<void> deleteGoal(String goalId);
 }
 
 @LazySingleton(as: SavingsService)
@@ -103,5 +116,44 @@ class SavingsServiceImpl implements SavingsService {
     );
     await _idempotency.record(idempotencyKey);
     return updated;
+  }
+
+  @override
+  Future<SavingsGoal> updateGoal({
+    required String goalId,
+    required String name,
+    required int targetKobo,
+    required DateTime targetDate,
+  }) async {
+    final goal = _goals.findById(goalId);
+    if (goal == null) {
+      throw const ApiException('That goal no longer exists');
+    }
+    if (name.trim().isEmpty) {
+      throw const ApiException('Give the goal a name');
+    }
+    if (targetKobo <= 0) {
+      throw const ApiException('Set a target greater than zero');
+    }
+
+    final updated = goal.copyWith(
+      name: name.trim(),
+      targetKobo: targetKobo,
+      targetDate: targetDate,
+    );
+    await _goals.update(updated);
+    return updated;
+  }
+
+  @override
+  Future<void> deleteGoal(String goalId) async {
+    final goal = _goals.findById(goalId);
+    if (goal == null) {
+      throw const ApiException('That goal no longer exists');
+    }
+    if (goal.savedKobo > 0) {
+      await _accounts.setBalanceKobo(_accounts.balanceKobo() + goal.savedKobo);
+    }
+    await _goals.delete(goalId);
   }
 }

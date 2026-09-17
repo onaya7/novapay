@@ -9,6 +9,7 @@ abstract class RoutesPath {
   static const String biometricConfirm = '/send-money/biometric-confirm';
   static const String addMoney = '/add-money';
   static const String createGoal = '/create-goal';
+  static const String editGoal = '/edit-goal';
   static const String contribute = '/contribute';
   static const String transactionDetail = '/transaction';
 }

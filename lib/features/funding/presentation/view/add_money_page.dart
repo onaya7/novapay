@@ -74,7 +74,7 @@ class _FormState extends State<_Form> {
   }
 
   void _choose(Money amount) {
-    final text = amount.format(withSymbol: false);
+    final text = amount.toEditableString();
     _controller
       ..text = text
       ..selection = TextSelection.collapsed(offset: text.length);

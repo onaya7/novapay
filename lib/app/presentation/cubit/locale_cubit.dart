@@ -3,7 +3,7 @@ import 'package:injectable/injectable.dart';
 import 'package:novapay/core/constants/storage_keys.dart';
 import 'package:novapay/core/local_data/local_data_storage.dart';
 
-enum AppLocale { system, en, ha }
+enum AppLocale { system, en, es, fr }
 
 /// The chosen language, restored **in the constructor** rather than after a
 /// first frame, so the app never flashes the wrong one on launch.

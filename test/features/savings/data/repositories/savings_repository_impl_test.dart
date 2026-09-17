@@ -273,6 +273,102 @@ void main() {
     });
   });
 
+  group('updateGoal', () {
+    test('a valid edit is reflected in the list', () async {
+      final goal = await createGoal();
+
+      final result = await repository.updateGoal(
+        goalId: goal.id,
+        name: 'New rent',
+        target: const Money.fromKobo(20000000),
+        targetDate: goal.targetDate,
+      );
+
+      expect(
+        result.getOrElse(() => throw StateError('expected a goal')).name,
+        'New rent',
+      );
+      expect((await goals()).single.targetKobo, 20000000);
+    });
+
+    test('an edit to a goal that no longer exists is a Failure', () async {
+      final result = await repository.updateGoal(
+        goalId: 'missing',
+        name: 'New rent',
+        target: const Money.fromKobo(20000000),
+        targetDate: DateTime.now(),
+      );
+
+      expect(
+        result,
+        const Left<Failure, SavingsGoalItem>(
+          Failure.serverError('That goal no longer exists'),
+        ),
+      );
+    });
+  });
+
+  group('deleteGoal', () {
+    test('an untouched goal is removed', () async {
+      final goal = await createGoal();
+
+      final result = await repository.deleteGoal(goal.id);
+
+      expect(result.isRight(), isTrue);
+      expect(await goals(), isEmpty);
+    });
+
+    test('what was saved is refunded to the wallet', () async {
+      final goal = await createGoal();
+      await repository.contribute(
+        goalId: goal.id,
+        amount: const Money.fromKobo(2500000),
+      );
+      final before = await repository.available();
+
+      await repository.deleteGoal(goal.id);
+
+      final after = await repository.available();
+      expect(
+        after.getOrElse(() => Money.zero).kobo -
+            before.getOrElse(() => Money.zero).kobo,
+        2500000,
+      );
+    });
+
+    test('refuses while a contribution is still pending', () async {
+      final goal = await createGoal();
+      online(connected: false);
+      await repository.contribute(
+        goalId: goal.id,
+        amount: const Money.fromKobo(2500000),
+      );
+
+      final result = await repository.deleteGoal(goal.id);
+
+      expect(
+        result,
+        const Left<Failure, Unit>(
+          Failure.serverError(
+            'Finish the pending contribution before deleting this goal',
+          ),
+        ),
+      );
+      expect(await goals(), hasLength(1));
+    });
+
+    test('deleting a goal that no longer exists is a Failure', () async {
+      final result = await repository.deleteGoal('missing');
+
+      expect(
+        result,
+        const Left<Failure, Unit>(
+          Failure.serverError('That goal no longer exists'),
+        ),
+      );
+    });
+  });
+
   group('watch', () {
     test('re-emits with the new pending total when the queue moves', () async {
       final goal = await createGoal();

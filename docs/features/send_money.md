@@ -31,7 +31,7 @@ rule lives in a widget.
 3. `data/repositories/transfer_repository_impl.dart` — the funds guard and the enqueue.
 4. `presentation/cubit/send_money_cubit.dart` — step navigation, bank selection and submit.
 5. `presentation/widgets/send_money_widgets.dart` — the three steps and the receipt, every string
-   routed through `context.l10n` (`lib/l10n/arb/`; English, Spanish and Hausa).
+   routed through `context.l10n` (`lib/l10n/arb/`; English, Spanish and French).
 6. `presentation/widgets/bank_picker_sheet.dart` / `bank_avatar.dart` — the searchable picker and
    the logo-or-initials avatar it shares with the recipient step.
 7. `presentation/view/biometric_confirm_page.dart` — the biometric confirmation screen, pushed as

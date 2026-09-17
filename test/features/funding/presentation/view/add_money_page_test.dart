@@ -97,7 +97,16 @@ void main() {
 
     await tester.tap(find.text('₦5,000.00'));
 
-    verify(() => cubit.amountChanged('5,000.00')).called(1);
+    verify(() => cubit.amountChanged('5000.00')).called(1);
+  });
+
+  testWidgets('typing after a preset still reaches the cubit', (tester) async {
+    await pump(tester, AddMoneyState.editing(draft()));
+
+    await tester.tap(find.text('₦5,000.00'));
+    await tester.enterText(find.byType(TextField), '50000.00');
+
+    verify(() => cubit.amountChanged('50000.00')).called(1);
   });
 
   testWidgets('the button queues the top-up', (tester) async {

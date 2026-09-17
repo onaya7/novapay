@@ -9,6 +9,7 @@ abstract class RoutesName {
   static const String biometricConfirm = 'biometricConfirm';
   static const String addMoney = 'addMoney';
   static const String createGoal = 'createGoal';
+  static const String editGoal = 'editGoal';
   static const String contribute = 'contribute';
   static const String transactionDetail = 'transactionDetail';
 }

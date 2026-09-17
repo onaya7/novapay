@@ -128,6 +128,7 @@ class _Ready extends StatelessWidget {
           key: ValueKey(goal.id),
           goal: goal,
           onTap: () => _openContribute(context, goal),
+          onMore: () => _openActions(context, goal),
         );
       },
     );
@@ -140,5 +141,45 @@ class _Ready extends StatelessWidget {
     final cubit = context.read<SavingsCubit>();
     await context.pushNamed(RoutesName.contribute, extra: goal);
     await cubit.refresh();
+  }
+
+  Future<void> _openActions(BuildContext context, SavingsGoalItem goal) async {
+    final cubit = context.read<SavingsCubit>();
+    final action = await showModalBottomSheet<GoalAction>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppSize.radiusXl),
+        ),
+      ),
+      builder: (_) => const GoalActionsSheet(),
+    );
+    if (!context.mounted || action == null) return;
+
+    switch (action) {
+      case GoalAction.edit:
+        await context.pushNamed(RoutesName.editGoal, extra: goal);
+        await cubit.refresh();
+      case GoalAction.delete:
+        await _confirmDelete(context, cubit, goal);
+    }
+  }
+
+  Future<void> _confirmDelete(
+    BuildContext context,
+    SavingsCubit cubit,
+    SavingsGoalItem goal,
+  ) async {
+    final confirmed = await showModalBottomSheet<bool>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppSize.radiusXl),
+        ),
+      ),
+      builder: (_) => DeleteGoalConfirmSheet(goalName: goal.name),
+    );
+    if (confirmed != true) return;
+    await cubit.delete(goal.id);
   }
 }

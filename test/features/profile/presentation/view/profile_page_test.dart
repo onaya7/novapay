@@ -127,11 +127,11 @@ void main() {
 
   testWidgets('the language toggle switches locale', (tester) async {
     await pump(tester, const ProfileState.ready(UserProfile()));
-    await tester.ensureVisible(find.text('Hausa'));
+    await tester.ensureVisible(find.text('French'));
 
-    await tester.tap(find.text('Hausa'));
+    await tester.tap(find.text('French'));
 
-    verify(() => locale.setLocale(AppLocale.ha)).called(1);
+    verify(() => locale.setLocale(AppLocale.fr)).called(1);
   });
 
   testWidgets('ProfilePage renders the view', (tester) async {

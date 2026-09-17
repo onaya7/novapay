@@ -11,13 +11,18 @@ import 'package:novapay/features/savings/domain/entities/savings_goal_item.dart'
 import 'package:novapay/features/savings/domain/usecases/savings_usecases.dart';
 import 'package:novapay/features/savings/presentation/cubit/contribute_cubit.dart';
 import 'package:novapay/features/savings/presentation/cubit/create_goal_cubit.dart';
+import 'package:novapay/features/savings/presentation/cubit/edit_goal_cubit.dart';
 import 'package:novapay/features/savings/presentation/cubit/savings_cubit.dart';
 
 class _MockLoadGoals extends Mock implements LoadGoals;
 
 class _MockWatchGoals extends Mock implements WatchGoals;
 
+class _MockDeleteGoal extends Mock implements DeleteGoal;
+
 class _MockCreateGoal extends Mock implements CreateGoal;
+
+class _MockUpdateGoal extends Mock implements UpdateGoal;
 
 class _MockLoadSavable extends Mock implements LoadSavableBalance;
 
@@ -41,16 +46,29 @@ void main() {
     registerFallbackValue(
       const ContributionParams(goalId: '', amount: Money.zero),
     );
+    registerFallbackValue(const DeleteGoalParams(goalId: ''));
+    registerFallbackValue(
+      UpdateGoalParams(
+        goalId: '',
+        name: '',
+        target: Money.zero,
+        targetDate: DateTime(2027),
+      ),
+    );
   });
 
   group('SavingsCubit', () {
     late _MockLoadGoals load;
     late _MockWatchGoals watch;
+    late _MockDeleteGoal delete;
     late StreamController<List<SavingsGoalItem>> updates;
+
+    SavingsCubit build() => SavingsCubit(load, watch, delete);
 
     setUp(() {
       load = _MockLoadGoals();
       watch = _MockWatchGoals();
+      delete = _MockDeleteGoal();
       updates = StreamController<List<SavingsGoalItem>>.broadcast();
       when(() => watch(const NoParams())).thenAnswer((_) => updates.stream);
       when(() => load(const NoParams()))
@@ -60,11 +78,11 @@ void main() {
     tearDown(() => updates.close());
 
     test('opens on loading, so the first frame is never blank', () {
-      expect(SavingsCubit(load, watch).state, const SavingsState.loading());
+      expect(build().state, const SavingsState.loading());
     });
 
     test('start loads once and shows the goals', () async {
-      final cubit = SavingsCubit(load, watch);
+      final cubit = build();
 
       await cubit.start();
 
@@ -74,7 +92,7 @@ void main() {
     });
 
     test('a queued contribution reaches the list without a reload', () async {
-      final cubit = SavingsCubit(load, watch);
+      final cubit = build();
       await cubit.start();
 
       final updated = [_goal.copyWith(pendingKobo: 500000)];
@@ -89,7 +107,7 @@ void main() {
     test('a failure is shown as copy, never as a raw failure', () async {
       when(() => load(const NoParams()))
           .thenAnswer((_) async => const Left(Failure.noInternet()));
-      final cubit = SavingsCubit(load, watch);
+      final cubit = build();
 
       await cubit.start();
 
@@ -103,13 +121,43 @@ void main() {
     });
 
     test('closing releases the queue subscription', () async {
-      final cubit = SavingsCubit(load, watch);
+      final cubit = build();
       await cubit.start();
       expect(updates.hasListener, isTrue);
 
       await cubit.close();
 
       expect(updates.hasListener, isFalse);
+    });
+
+    test('delete refreshes the list on success', () async {
+      when(() => delete(any())).thenAnswer((_) async => const Right(unit));
+      final cubit = build();
+      await cubit.start();
+
+      await cubit.delete('g1');
+
+      verify(() => delete(const DeleteGoalParams(goalId: 'g1'))).called(1);
+      verify(() => load(const NoParams())).called(2);
+      expect(cubit.state, SavingsState.ready([_goal]));
+      await cubit.close();
+    });
+
+    test('delete shows a refusal as copy, never as a raw failure', () async {
+      when(() => delete(any())).thenAnswer(
+        (_) async =>
+            const Left(Failure.serverError('That goal no longer exists')),
+      );
+      final cubit = build();
+      await cubit.start();
+
+      await cubit.delete('g1');
+
+      expect(
+        cubit.state,
+        const SavingsState.failure('That goal no longer exists'),
+      );
+      await cubit.close();
     });
   });
 
@@ -201,6 +249,134 @@ void main() {
       await cubit.submit();
 
       expect(seen.first, isA<CreateGoalSubmitting>());
+      expect(cubit.state.isSubmitting, isFalse);
+      await subscription.cancel();
+    });
+  });
+
+  group('EditGoalCubit', () {
+    late _MockUpdateGoal update;
+
+    setUp(() {
+      update = _MockUpdateGoal();
+      when(() => update(any())).thenAnswer((_) async => Right(_goal));
+    });
+
+    EditGoalCubit build() => EditGoalCubit(update);
+
+    Future<EditGoalCubit> started() async {
+      final cubit = build();
+      await cubit.start(_goal);
+      return cubit;
+    }
+
+    test('has no draft until seeded', () {
+      expect(build().state.draft, isNull);
+    });
+
+    test('start seeds the draft from the goal being edited', () async {
+      final cubit = await started();
+
+      expect(
+        cubit.state.draft,
+        GoalDraft(
+          id: 'g1',
+          name: 'Rent',
+          target: const Money.fromKobo(10000000),
+          targetDate: DateTime(2027),
+        ),
+      );
+    });
+
+    test('a target is parsed through Money, never a double', () async {
+      final cubit = await started();
+
+      cubit.targetChanged('0.29');
+
+      expect(cubit.state.draft?.target, const Money.fromKobo(29));
+    });
+
+    test('unparseable input falls back to zero rather than throwing', () async {
+      final cubit = await started();
+
+      cubit.targetChanged('abc');
+
+      expect(cubit.state.draft?.target, Money.zero);
+    });
+
+    test('a chosen date reaches the draft', () async {
+      final cubit = await started();
+
+      cubit.dateChanged(DateTime(2030));
+
+      expect(cubit.state.draft?.targetDate, DateTime(2030));
+    });
+
+    test('changes before seeding are ignored, not a crash', () {
+      final cubit = build()
+        ..nameChanged('Rent')
+        ..targetChanged('100000')
+        ..dateChanged(DateTime(2027));
+
+      expect(cubit.state.draft, isNull);
+    });
+
+    test('submit does nothing before the draft is seeded', () async {
+      final cubit = build();
+
+      await cubit.submit();
+
+      expect(cubit.state, isA<EditGoalInitial>());
+      verifyNever(() => update(any()));
+    });
+
+    test('a valid edit updates and finishes', () async {
+      final cubit = await started();
+      cubit.nameChanged('New rent');
+
+      await cubit.submit();
+
+      expect(cubit.state, isA<EditGoalDone>());
+      verify(
+        () => update(
+          UpdateGoalParams(
+            goalId: 'g1',
+            name: 'New rent',
+            target: const Money.fromKobo(10000000),
+            targetDate: DateTime(2027),
+          ),
+        ),
+      ).called(1);
+    });
+
+    test('a refusal returns to editing with copy, keeping the draft', () async {
+      when(() => update(any())).thenAnswer(
+        (_) async =>
+            const Left(Failure.serverError('That goal no longer exists')),
+      );
+      final cubit = await started();
+
+      await cubit.submit();
+
+      expect(
+        cubit.state,
+        isA<EditGoalEditing>().having(
+          (s) => s.error,
+          'error',
+          'That goal no longer exists',
+        ),
+      );
+      expect(cubit.state.draft?.name, 'Rent');
+    });
+
+    test('isSubmitting is only true while in flight', () async {
+      final cubit = await started();
+      final seen = <EditGoalState>[];
+      final subscription = cubit.stream.listen(seen.add);
+
+      await cubit.submit();
+
+      expect(seen.first, isA<EditGoalSubmitting>());
       expect(cubit.state.isSubmitting, isFalse);
       await subscription.cancel();
     });

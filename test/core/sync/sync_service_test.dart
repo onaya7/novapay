@@ -75,6 +75,23 @@ class _GatedApi implements NovaPayApi {
   );
 
   @override
+  Future<ApiResponse<SavingsGoal>> updateGoal({
+    required String goalId,
+    required String name,
+    required int targetKobo,
+    required DateTime targetDate,
+  }) => _inner.updateGoal(
+    goalId: goalId,
+    name: name,
+    targetKobo: targetKobo,
+    targetDate: targetDate,
+  );
+
+  @override
+  Future<ApiResponse<bool>> deleteGoal(String goalId) =>
+      _inner.deleteGoal(goalId);
+
+  @override
   Future<ApiResponse<SavingsGoal>> createGoal({
     required String id,
     required String name,

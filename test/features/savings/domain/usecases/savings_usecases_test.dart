@@ -96,6 +96,48 @@ void main() {
     ).called(1);
   });
 
+  test('UpdateGoal hands the params through unchanged', () async {
+    when(
+      () => repository.updateGoal(
+        goalId: any(named: 'goalId'),
+        name: any(named: 'name'),
+        target: any(named: 'target'),
+        targetDate: any(named: 'targetDate'),
+      ),
+    ).thenAnswer((_) async => Right(_goal));
+
+    final result = await UpdateGoal(repository)(
+      UpdateGoalParams(
+        goalId: 'g1',
+        name: 'Rent',
+        target: const Money.fromKobo(100),
+        targetDate: DateTime(2027),
+      ),
+    );
+
+    expect(result.getOrElse(() => throw StateError('expected a goal')), _goal);
+    verify(
+      () => repository.updateGoal(
+        goalId: 'g1',
+        name: 'Rent',
+        target: const Money.fromKobo(100),
+        targetDate: DateTime(2027),
+      ),
+    ).called(1);
+  });
+
+  test('DeleteGoal hands the id through unchanged', () async {
+    when(() => repository.deleteGoal(any()))
+        .thenAnswer((_) async => const Right(unit));
+
+    final result = await DeleteGoal(repository)(
+      const DeleteGoalParams(goalId: 'g1'),
+    );
+
+    expect(result, const Right<Failure, Unit>(unit));
+    verify(() => repository.deleteGoal('g1')).called(1);
+  });
+
   test('ContributeToGoal hands the params through unchanged', () async {
     when(
       () => repository.contribute(

@@ -118,5 +118,17 @@ void main() {
         '5.0',
       );
     });
+
+    test(
+      'a grouped value can never be edited again, so nothing feeds it one',
+      () {
+        expect(
+          formatter
+              .formatEditUpdate(_value('5,000.00'), _value('5,000.0'))
+              .text,
+          '5,000.00',
+        );
+      },
+    );
   });
 }

@@ -31,7 +31,7 @@ void main() {
   });
 
   test('an unreadable value also falls back to the system', () async {
-    await box.put(StorageKeys.locale, 'fr');
+    await box.put(StorageKeys.locale, 'xx');
 
     final cubit = LocaleCubit(db);
 
@@ -39,20 +39,20 @@ void main() {
   });
 
   test('restores a previously saved locale in the constructor', () async {
-    await box.put(StorageKeys.locale, 'ha');
+    await box.put(StorageKeys.locale, 'fr');
 
     final cubit = LocaleCubit(db);
 
-    expect(cubit.state, AppLocale.ha);
+    expect(cubit.state, AppLocale.fr);
   });
 
   test('setLocale emits and persists', () async {
     final cubit = LocaleCubit(db);
 
-    await cubit.setLocale(AppLocale.ha);
+    await cubit.setLocale(AppLocale.fr);
 
-    expect(cubit.state, AppLocale.ha);
-    expect(db.read<String>(StorageKeys.locale), 'ha');
+    expect(cubit.state, AppLocale.fr);
+    expect(db.read<String>(StorageKeys.locale), 'fr');
   });
 
   test('setting the same locale again is a no-op', () async {

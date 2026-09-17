@@ -144,7 +144,7 @@ class AmountStep extends StatefulWidget {
 class _AmountStepState extends State<AmountStep> {
   late final TextEditingController _controller = TextEditingController(
     text: widget.draft.amountIsEntered
-        ? widget.draft.amount.format(withSymbol: false)
+        ? widget.draft.amount.toEditableString()
         : '',
   );
 
@@ -155,7 +155,7 @@ class _AmountStepState extends State<AmountStep> {
   }
 
   void _choose(Money amount) {
-    final text = amount.format(withSymbol: false);
+    final text = amount.toEditableString();
     _controller
       ..text = text
       ..selection = TextSelection.collapsed(offset: text.length);

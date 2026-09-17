@@ -90,6 +90,23 @@ void main() {
     });
   });
 
+  group('toEditableString', () {
+    test('has no grouping, unlike format', () {
+      expect(const Money.fromKobo(500000).toEditableString(), '5000.00');
+    });
+
+    test('round-trips through Money.parse', () {
+      expect(
+        Money.parse(const Money.fromKobo(29).toEditableString()),
+        const Money.fromKobo(29),
+      );
+    });
+
+    test('carries the sign', () {
+      expect(const Money.fromKobo(-16400).toEditableString(), '-164.00');
+    });
+  });
+
   group('round trip', () {
     test('parse(format(k)) == k across boundaries', () {
       const values = <int>[

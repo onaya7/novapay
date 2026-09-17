@@ -8,6 +8,7 @@ import 'package:novapay/features/profile/presentation/view/profile_page.dart';
 import 'package:novapay/features/savings/domain/entities/savings_goal_item.dart';
 import 'package:novapay/features/savings/presentation/view/contribute_page.dart';
 import 'package:novapay/features/savings/presentation/view/create_goal_page.dart';
+import 'package:novapay/features/savings/presentation/view/edit_goal_page.dart';
 import 'package:novapay/features/savings/presentation/view/savings_page.dart';
 import 'package:novapay/features/send_money/presentation/cubit/send_money_cubit.dart';
 import 'package:novapay/features/send_money/presentation/view/biometric_confirm_page.dart';
@@ -43,6 +44,12 @@ final List<RouteBase> taskRoutes = [
     path: RoutesPath.createGoal,
     name: RoutesName.createGoal,
     builder: (context, state) => const CreateGoalPage(),
+  ),
+  GoRoute(
+    path: RoutesPath.editGoal,
+    name: RoutesName.editGoal,
+    builder: (context, state) =>
+        EditGoalPage(goal: state.extra! as SavingsGoalItem),
   ),
   GoRoute(
     path: RoutesPath.contribute,

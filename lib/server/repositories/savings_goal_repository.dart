@@ -9,6 +9,7 @@ abstract class SavingsGoalRepository {
   SavingsGoal? findById(String id);
   Future<void> insert(SavingsGoal goal);
   Future<void> update(SavingsGoal goal);
+  Future<void> delete(String id);
   Future<void> clear();
 }
 
@@ -50,6 +51,12 @@ class SavingsGoalRepositoryImpl implements SavingsGoalRepository {
     _key,
     jsonEncode(goals.map((g) => g.toJson()).toList()),
   );
+
+  @override
+  Future<void> delete(String id) => _saveAll([
+    for (final goal in findAll())
+      if (goal.id != id) goal,
+  ]);
 
   @override
   Future<void> clear() => _db.delete(_key);

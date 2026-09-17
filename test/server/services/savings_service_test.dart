@@ -175,4 +175,89 @@ void main() {
       );
     });
   });
+
+  group('updateGoal', () {
+    setUp(createRent);
+
+    test('changes the name, target and date', () async {
+      final updated = await service.updateGoal(
+        goalId: 'g1',
+        name: '  New rent  ',
+        targetKobo: 20000000,
+        targetDate: DateTime.utc(2028),
+      );
+
+      expect(updated.name, 'New rent');
+      expect(updated.targetKobo, 20000000);
+      expect(updated.targetDate, DateTime.utc(2028));
+      expect(goals.findById('g1')!.name, 'New rent');
+    });
+
+    test('refuses an unknown goal', () async {
+      await expectLater(
+        service.updateGoal(
+          goalId: 'nope',
+          name: 'Rent',
+          targetKobo: 10000000,
+          targetDate: DateTime.utc(2027),
+        ),
+        throwsA(isA<ApiException>()),
+      );
+    });
+
+    test('refuses an empty name or a non-positive target', () async {
+      await expectLater(
+        service.updateGoal(
+          goalId: 'g1',
+          name: '   ',
+          targetKobo: 10000000,
+          targetDate: DateTime.utc(2027),
+        ),
+        throwsA(isA<ApiException>()),
+      );
+      await expectLater(
+        service.updateGoal(
+          goalId: 'g1',
+          name: 'Rent',
+          targetKobo: 0,
+          targetDate: DateTime.utc(2027),
+        ),
+        throwsA(isA<ApiException>()),
+      );
+    });
+  });
+
+  group('deleteGoal', () {
+    setUp(createRent);
+
+    test('refunds what was saved and removes the goal', () async {
+      await service.contribute(
+        idempotencyKey: 'c1',
+        goalId: 'g1',
+        amountKobo: 250000,
+      );
+      final balanceBeforeDelete = accounts.balanceKobo();
+
+      await service.deleteGoal('g1');
+
+      expect(accounts.balanceKobo(), balanceBeforeDelete + 250000);
+      expect(goals.findById('g1'), isNull);
+    });
+
+    test('an untouched goal is removed without touching the balance', () async {
+      final before = accounts.balanceKobo();
+
+      await service.deleteGoal('g1');
+
+      expect(accounts.balanceKobo(), before);
+      expect(goals.findById('g1'), isNull);
+    });
+
+    test('refuses an unknown goal', () async {
+      await expectLater(
+        service.deleteGoal('nope'),
+        throwsA(isA<ApiException>()),
+      );
+    });
+  });
 }

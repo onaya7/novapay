@@ -48,6 +48,15 @@ abstract class NovaPayApi {
     required int targetKobo,
     required DateTime targetDate,
   });
+
+  Future<ApiResponse<SavingsGoal>> updateGoal({
+    required String goalId,
+    required String name,
+    required int targetKobo,
+    required DateTime targetDate,
+  });
+
+  Future<ApiResponse<bool>> deleteGoal(String goalId);
 }
 
 /// The in-process stand-in, backed by the local database.
@@ -196,6 +205,27 @@ class NovaPayApiImpl implements NovaPayApi {
     ),
     successCode: 201,
   );
+
+  @override
+  Future<ApiResponse<SavingsGoal>> updateGoal({
+    required String goalId,
+    required String name,
+    required int targetKobo,
+    required DateTime targetDate,
+  }) => _handle(
+    () => _savings.updateGoal(
+      goalId: goalId,
+      name: name,
+      targetKobo: targetKobo,
+      targetDate: targetDate,
+    ),
+  );
+
+  @override
+  Future<ApiResponse<bool>> deleteGoal(String goalId) => _handle(() async {
+    await _savings.deleteGoal(goalId);
+    return true;
+  });
 
   /// Wipes the server, including the applied keys. Demo and test use only.
   Future<void> reset() async {

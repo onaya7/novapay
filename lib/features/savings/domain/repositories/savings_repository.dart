@@ -17,6 +17,17 @@ abstract class SavingsRepository {
     required DateTime targetDate,
   });
 
+  /// Not queued, like [createGoal]: moves no money.
+  Future<Either<Failure, SavingsGoalItem>> updateGoal({
+    required String goalId,
+    required String name,
+    required Money target,
+    required DateTime targetDate,
+  });
+
+  /// Not queued. Refuses while a contribution is still pending for this goal.
+  Future<Either<Failure, Unit>> deleteGoal(String goalId);
+
   /// Queued, not sent: money moving must survive being offline.
   Future<Either<Failure, Unit>> contribute({
     required String goalId,

@@ -13,10 +13,12 @@ part 'savings_state.dart';
 
 @injectable
 class SavingsCubit extends Cubit<SavingsState> {
-  SavingsCubit(this._load, this._watch) : super(const SavingsState.loading());
+  SavingsCubit(this._load, this._watch, this._delete)
+    : super(const SavingsState.loading());
 
   final LoadGoals _load;
   final WatchGoals _watch;
+  final DeleteGoal _delete;
 
   static const ConvertFailureToString _toMessage = ConvertFailureToString();
 
@@ -40,6 +42,16 @@ class SavingsCubit extends Cubit<SavingsState> {
 
   void _onGoals(List<SavingsGoalItem> goals) {
     emit(SavingsState.ready(goals));
+  }
+
+  Future<void> delete(String goalId) async {
+    final result = await _delete(DeleteGoalParams(goalId: goalId));
+    final failure = result.fold((failure) => failure, (_) => null);
+    if (failure == null) {
+      await refresh();
+      return;
+    }
+    emit(SavingsState.failure(_toMessage(failure)));
   }
 
   @override

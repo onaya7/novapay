@@ -65,7 +65,13 @@ class AppView extends StatelessWidget {
         darkTheme: AppTheme.dark,
         themeMode: mode.asThemeMode,
         locale: locale.asLocale,
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        // material_ui has its own MaterialLocalizations, separate from
+        // Flutter's; its auto-added fallback covers English only, so every
+        // other supported locale needs its multi-locale delegates too.
+        localizationsDelegates: const [
+          ...AppLocalizations.localizationsDelegates,
+          ...GlobalMaterialLocalizations.delegates,
+        ],
         supportedLocales: AppLocalizations.supportedLocales,
         routerConfig: router,
       ),
@@ -93,13 +99,15 @@ extension AppLocaleX on AppLocale {
   Locale? get asLocale => switch (this) {
     AppLocale.system => null,
     AppLocale.en => const Locale('en'),
-    AppLocale.ha => const Locale('ha'),
+    AppLocale.es => const Locale('es'),
+    AppLocale.fr => const Locale('fr'),
   };
 
   /// The word on the toggle.
   String get label => switch (this) {
     AppLocale.system => 'System',
     AppLocale.en => 'English',
-    AppLocale.ha => 'Hausa',
+    AppLocale.es => 'Spanish',
+    AppLocale.fr => 'French',
   };
 }

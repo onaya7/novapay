@@ -251,7 +251,7 @@ void main() {
 
       await tester.tap(find.text('₦5,000.00'));
 
-      verify(() => cubit.amountChanged('5,000.00')).called(1);
+      verify(() => cubit.amountChanged('5000.00')).called(1);
     });
 
     testWidgets('All offers everything that is available', (tester) async {
@@ -262,7 +262,7 @@ void main() {
 
       await tester.tap(find.text('₦20,000.00'));
 
-      verify(() => cubit.amountChanged('20,000.00')).called(1);
+      verify(() => cubit.amountChanged('20000.00')).called(1);
     });
 
     testWidgets('back returns to the recipient step', (tester) async {

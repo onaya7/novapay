@@ -69,6 +69,59 @@ class CreateGoal implements UseCase<SavingsGoalItem, NewGoalParams> {
       );
 }
 
+class UpdateGoalParams extends Equatable {
+  const UpdateGoalParams({
+    required this.goalId,
+    required this.name,
+    required this.target,
+    required this.targetDate,
+  });
+
+  final String goalId;
+  final String name;
+  final Money target;
+  final DateTime targetDate;
+
+  @override
+  List<Object?> get props => [goalId, name, target, targetDate];
+}
+
+@lazySingleton
+class UpdateGoal implements UseCase<SavingsGoalItem, UpdateGoalParams> {
+  const UpdateGoal(this._repository);
+
+  final SavingsRepository _repository;
+
+  @override
+  Future<Either<Failure, SavingsGoalItem>> call(UpdateGoalParams params) =>
+      _repository.updateGoal(
+        goalId: params.goalId,
+        name: params.name,
+        target: params.target,
+        targetDate: params.targetDate,
+      );
+}
+
+class DeleteGoalParams extends Equatable {
+  const DeleteGoalParams({required this.goalId});
+
+  final String goalId;
+
+  @override
+  List<Object?> get props => [goalId];
+}
+
+@lazySingleton
+class DeleteGoal implements UseCase<Unit, DeleteGoalParams> {
+  const DeleteGoal(this._repository);
+
+  final SavingsRepository _repository;
+
+  @override
+  Future<Either<Failure, Unit>> call(DeleteGoalParams params) =>
+      _repository.deleteGoal(params.goalId);
+}
+
 class ContributionParams extends Equatable {
   const ContributionParams({required this.goalId, required this.amount});
 

@@ -100,6 +100,15 @@ class Money implements Comparable<Money> {
     return '$sign$symbol$naira.$remainder';
   }
 
+  /// Digits only, no grouping — what an editable amount field should hold.
+  String toEditableString() {
+    final magnitude = kobo.abs();
+    final naira = magnitude ~/ 100;
+    final remainder = (magnitude % 100).toString().padLeft(2, '0');
+    final sign = kobo < 0 ? '-' : '';
+    return '$sign$naira.$remainder';
+  }
+
   @override
   int compareTo(Money other) => kobo.compareTo(other.kobo);
 

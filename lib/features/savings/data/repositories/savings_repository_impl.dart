@@ -52,6 +52,43 @@ class SavingsRepositoryImpl implements SavingsRepository {
     },
   );
 
+  /// Not queued, like [createGoal]: moves no money.
+  @override
+  Future<Either<Failure, SavingsGoalItem>> updateGoal({
+    required String goalId,
+    required String name,
+    required Money target,
+    required DateTime targetDate,
+  }) => _runner(
+    safeCallback: () async {
+      final response = await _api.updateGoal(
+        goalId: goalId,
+        name: name,
+        targetKobo: target.kobo,
+        targetDate: targetDate,
+      );
+      return _toItem(
+        _unwrap(response),
+        pendingKobo: _pendingByGoal()[goalId] ?? 0,
+      );
+    },
+  );
+
+  /// Refuses while money is still on its way to this goal, so the queue never
+  /// replays a contribution against a goal that no longer exists.
+  @override
+  Future<Either<Failure, Unit>> deleteGoal(String goalId) => _runner(
+    safeCallback: () async {
+      if ((_pendingByGoal()[goalId] ?? 0) > 0) {
+        throw const AppException.server(
+          'Finish the pending contribution before deleting this goal',
+        );
+      }
+      _unwrap(await _api.deleteGoal(goalId));
+      return unit;
+    },
+  );
+
   /// Queued, because this one does move money.
   @override
   Future<Either<Failure, Unit>> contribute({

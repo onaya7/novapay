@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:novapay/config/theme/app_theme_colors.dart';
+import 'package:novapay/core/components/custom_button.dart';
 import 'package:novapay/core/components/money_text.dart';
 import 'package:novapay/core/components/state_widgets.dart';
 import 'package:novapay/core/components/status_chip.dart';
@@ -58,10 +59,16 @@ class GoalProgressBar extends StatelessWidget {
 
 /// One goal in the list.
 class GoalCard extends StatelessWidget {
-  const new({required this.goal, required this.onTap, super.key});
+  const new({
+    required this.goal,
+    required this.onTap,
+    required this.onMore,
+    super.key,
+  });
 
   final SavingsGoalItem goal;
   final VoidCallback onTap;
+  final VoidCallback onMore;
 
   @override
   Widget build(BuildContext context) {
@@ -103,11 +110,39 @@ class GoalCard extends StatelessWidget {
                     const StatusChip(label: 'Reached', tone: ChipTone.success)
                   else if (goal.hasPending)
                     const StatusChip(label: 'Pending', tone: ChipTone.pending),
+                  _MoreButton(onTap: onMore),
                 ],
               ),
               AppSize.h(AppSize.md),
               GoalProgressBar(goal: goal),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The overflow tap target on a goal card: edit or delete.
+class _MoreButton extends StatelessWidget {
+  const _MoreButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    return Tooltip(
+      message: 'More actions',
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppSize.radiusPill),
+          child: SizedBox(
+            height: AppSize.touchTarget,
+            width: AppSize.touchTarget,
+            child: Icon(Icons.more_vert, color: colors.subtext),
           ),
         ),
       ),
@@ -174,6 +209,150 @@ class SavingsSkeleton extends StatelessWidget {
           AppSize.h(AppSize.smd),
         ],
       ],
+    );
+  }
+}
+
+/// What a goal card's overflow menu can be asked for.
+enum GoalAction { edit, delete }
+
+/// The overflow menu for a goal card: edit or delete it.
+class GoalActionsSheet extends StatelessWidget {
+  const new({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.all(AppSize.md),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const _SheetHandle(),
+            _ActionTile(
+              icon: Icons.edit_outlined,
+              label: 'Edit goal',
+              onTap: () => Navigator.of(context).pop(GoalAction.edit),
+            ),
+            _ActionTile(
+              icon: Icons.delete_outline,
+              label: 'Delete goal',
+              isDestructive: true,
+              onTap: () => Navigator.of(context).pop(GoalAction.delete),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Confirms before a goal is removed for good.
+class DeleteGoalConfirmSheet extends StatelessWidget {
+  const new({required this.goalName, super.key});
+
+  final String goalName;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final texts = Theme.of(context).textTheme;
+
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.all(AppSize.md),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const _SheetHandle(),
+            Text('Delete "$goalName"?', style: texts.titleLarge),
+            AppSize.h(AppSize.sm),
+            Text(
+              'This removes the goal for good. Anything already saved '
+              'toward it returns to your wallet.',
+              style: texts.bodyMedium?.copyWith(color: colors.subtext),
+            ),
+            AppSize.h(AppSize.lg),
+            CustomButton(
+              label: 'Delete goal',
+              variant: ButtonVariant.secondary,
+              onPressed: () => Navigator.of(context).pop(true),
+            ),
+            AppSize.h(AppSize.sm),
+            CustomButton(
+              label: 'Keep goal',
+              variant: ButtonVariant.plain,
+              onPressed: () => Navigator.of(context).pop(false),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SheetHandle extends StatelessWidget {
+  const _SheetHandle();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    return Center(
+      child: Container(
+        width: 40,
+        height: 4,
+        margin: const EdgeInsets.only(bottom: AppSize.md),
+        decoration: BoxDecoration(
+          color: colors.border,
+          borderRadius: BorderRadius.circular(AppSize.radiusPill),
+        ),
+      ),
+    );
+  }
+}
+
+class _ActionTile extends StatelessWidget {
+  const _ActionTile({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.isDestructive = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final bool isDestructive;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final color = isDestructive ? AppColor.danger : colors.textHeading;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppSize.radiusMd),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: AppSize.touchTarget),
+          padding: const EdgeInsets.symmetric(horizontal: AppSize.sm),
+          child: Row(
+            children: [
+              Icon(icon, color: color),
+              AppSize.w(AppSize.smd),
+              Text(
+                label,
+                style: Theme.of(context).textTheme.bodyLarge
+                    ?.copyWith(color: color),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

@@ -116,7 +116,7 @@ class ThemeModeToggle extends StatelessWidget {
   }
 }
 
-/// English, Hausa, or follow the device.
+/// English, Spanish, French, or follow the device.
 class LocaleToggle extends StatelessWidget {
   const new({super.key});
 
