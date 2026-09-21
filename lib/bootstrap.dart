@@ -8,6 +8,7 @@ import 'package:novapay/config/flavor/flavor_config.dart';
 import 'package:novapay/core/injections/injection.dart';
 import 'package:novapay/core/notifications/notification_service.dart';
 import 'package:novapay/core/notifications/transfer_sync_notifier.dart';
+import 'package:novapay/core/sync/sync_scheduler.dart';
 
 class AppBlocObserver extends BlocObserver {
   const new();
@@ -44,7 +45,10 @@ Future<void> bootstrap(
   }
   await configureDependencies();
   await sl<NotificationService>().initialize();
+  // After the notifier, which seeds itself from the already-`done` rows: a
+  // drain first would land new sends in that seed and silence their alert.
   await sl<TransferSyncNotifier>().start();
+  await sl<SyncScheduler>().start();
 
   Bloc.observer = const AppBlocObserver();
 

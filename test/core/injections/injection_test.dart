@@ -16,6 +16,7 @@ import 'package:novapay/core/local_data/secure_local_data_storage.dart';
 import 'package:novapay/core/network_info/network_info.dart';
 import 'package:novapay/core/notifications/notification_service.dart';
 import 'package:novapay/core/notifications/transfer_sync_notifier.dart';
+import 'package:novapay/core/sync/sync_scheduler.dart';
 import 'package:novapay/core/sync/sync_service.dart';
 import 'package:novapay/features/savings/data/repositories/savings_repository_impl.dart';
 import 'package:novapay/features/savings/domain/repositories/savings_repository.dart';
@@ -84,6 +85,7 @@ void main() {
     expect(sl<EitherSafeRunner>(), isA<EitherSafeRunner>());
     expect(sl<NovaPayApi>(), isA<NovaPayApiImpl>());
     expect(sl<SyncService>(), isA<SyncServiceImpl>());
+    expect(sl<SyncScheduler>(), isA<SyncScheduler>());
     expect(sl<WalletRepository>(), isA<WalletRepositoryImpl>());
     expect(sl<WalletCubit>(), isA<WalletCubit>());
   });

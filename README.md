@@ -566,7 +566,25 @@ The server's keys are namespaced as **the server's tables, not the client's**, s
 
 ### Retry pacing
 
-**Built:** a fixed retry budget of 5 attempts per action, reachability checked against the network rather than merely "is there an interface up" (captive portals return 200 to their own login page), and **backoff that is per-entry, persisted as `nextAttemptAt`, exponential, jittered off the entry's own id, and capped around 30 minutes** `[SOURCE: lib/core/sync/pending_action.dart]`. Persisted, because an in-memory backoff resets on restart and produces a thundering herd on the first cold start after a crash loop; jittered, because every client on a cell tower reconnects at the same moment and a shared, un-jittered delay would retry them all in lockstep.
+**Built:** a fixed retry budget of 5 attempts per action, reachability checked against the network rather than merely "is there an interface up" (captive portals return 200 to their own login page), and **backoff that is per-entry, persisted as `nextAttemptAt`, exponential and jittered off the entry's own id** `[SOURCE: lib/core/sync/pending_action.dart]`. Persisted, because an in-memory backoff resets on restart and produces a thundering herd on the first cold start after a crash loop; jittered, because every client on a cell tower reconnects at the same moment and a shared, un-jittered delay would retry them all in lockstep.
+
+The ladder in practice is **2s → 4s → 8s → 16s**, and the fifth attempt moves the entry to `unresolved`. `kPendingActionMaxBackoff` is 30 minutes, but with a budget of 5 the ceiling is never reached — the constant is a guard against a future larger budget, not a delay anyone observes.
+
+### What wakes the queue
+
+**Built.** A drain is not something a screen triggers. `SyncScheduler` `[SOURCE: lib/core/sync/sync_scheduler.dart]` owns every wake-up and is started once in `bootstrap()`:
+
+| Trigger | Case it covers |
+|---|---|
+| Startup — `recoverInterrupted()`, then one drain | Anything left queued, or stranded at `sending`, by the previous session |
+| `NetworkInfo.onConnectivityChanged` emitting `true` | The device regained a *reachable* network, not merely an interface |
+| A one-shot timer on the earliest `nextAttemptAt` | A backed-off entry falling due |
+
+The third row is the one that is easy to miss. An ambiguous attempt happens **while online** — a timeout or a socket close, with the network never going down — so no connectivity event will ever arrive to retry it. A backoff schedule with no timer behind it is a schedule nobody reads.
+
+The timer is armed from the `changes` stream rather than from the scheduler's own drains, because `enqueue` drains the service directly and a first attempt that fails ambiguously never passes through the scheduler. It is seeded from `actions()` at startup as well, because a backoff persisted across a kill emits no change event.
+
+No debounce guards the reconnect trigger, deliberately. `drain()` chains onto a future rather than guarding with a bool, so a drain requested mid-drain is deferred rather than dropped; a redundant drain is one reachability check and one Hive read; and the `id` is the idempotency key, so even a genuine double-send is collapsed server-side. A bool guard here would reintroduce exactly the lost wake-up that chain was written to prevent.
 
 **`[DESIGN — not built]`**, and the reasoning is why:
 
