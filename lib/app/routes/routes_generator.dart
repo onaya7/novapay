@@ -70,6 +70,7 @@ final List<RouteBase> taskRoutes = [
 /// position across a switch.
 GoRouter buildRouter() => GoRouter(
   initialLocation: RoutesPath.splash,
+  debugLogDiagnostics: true,
   routes: [
     GoRoute(
       path: RoutesPath.splash,
