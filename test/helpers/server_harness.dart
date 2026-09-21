@@ -9,18 +9,9 @@ import 'package:novapay/server/services/funding_service.dart';
 import 'package:novapay/server/services/savings_service.dart';
 import 'package:novapay/server/services/transfer_service.dart';
 
-/// A clock the test moves by hand, so a backoff window can be crossed without
-/// waiting for it.
-class TestClock implements Clock {
-  TestClock([DateTime? start]) : _now = start ?? DateTime(2026, 9, 16, 12);
+import 'test_clock.dart';
 
-  DateTime _now;
-
-  @override
-  DateTime now() => _now;
-
-  void advance(Duration by) => _now = _now.add(by);
-}
+export 'test_clock.dart';
 
 /// Wires a whole server over [db], the way the DI container does in the app.
 ///

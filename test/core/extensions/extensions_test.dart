@@ -94,6 +94,16 @@ void main() {
       expect(label(DateTime(2020, 1, 14)), '14 Jan 2020');
     });
 
+    test('labels against a supplied now, so a golden can pin it', () {
+      final now = DateTime(2026, 9, 17, 9);
+      String label(DateTime date) =>
+          date.dayLabel(today: 'Today', yesterday: 'Yesterday', now: now);
+      expect(label(DateTime(2026, 9, 17, 23)), 'Today');
+      expect(label(DateTime(2026, 9, 16)), 'Yesterday');
+      expect(label(DateTime(2026, 9, 15)), '15 Sep');
+      expect(label(DateTime(2020, 1, 14)), '14 Jan 2020');
+    });
+
     test('shows a clock time', () {
       expect(DateTime(2026, 9, 16, 9, 5).timeLabel, '09:05');
     });

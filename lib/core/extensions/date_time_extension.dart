@@ -16,10 +16,17 @@ extension DateTimeX on DateTime {
   /// What a transaction row shows: [today]/[yesterday], `14 Sep`, or the year
   /// as well once it is no longer this year. Localized words are supplied by
   /// the caller, since a plain `DateTime` extension has no `BuildContext`.
-  String dayLabel({required String today, required String yesterday}) {
-    if (isToday) return today;
-    if (isYesterday) return yesterday;
-    if (year == DateTime.now().year) return _dayMonth.format(this);
+  String dayLabel({
+    required String today,
+    required String yesterday,
+    DateTime? now,
+  }) {
+    final reference = now ?? DateTime.now();
+    if (isSameDayAs(reference)) return today;
+    if (isSameDayAs(reference.subtract(const Duration(days: 1)))) {
+      return yesterday;
+    }
+    if (year == reference.year) return _dayMonth.format(this);
     return _dayMonthYear.format(this);
   }
 

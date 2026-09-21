@@ -8,6 +8,7 @@ import 'package:novapay/core/components/status_chip.dart';
 import 'package:novapay/core/constants/app_color.dart';
 import 'package:novapay/core/constants/app_size.dart';
 import 'package:novapay/core/extensions/date_time_extension.dart';
+import 'package:novapay/core/time/clock_scope.dart';
 import 'package:novapay/features/wallet/domain/entities/activity_item.dart';
 import 'package:novapay/features/wallet/domain/entities/wallet_snapshot.dart';
 import 'package:novapay/l10n/l10n.dart';
@@ -278,6 +279,7 @@ class ActivityRow extends StatelessWidget {
     final day = item.occurredAt.dayLabel(
       today: l10n.todayLabel,
       yesterday: l10n.yesterdayLabel,
+      now: ClockScope.of(context).now(),
     );
 
     return Material(

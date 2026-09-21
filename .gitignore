@@ -125,3 +125,6 @@ lib/l10n/gen/
 
 # Presentation artifacts
 docs/*.pptx
+
+# Alchemist writes a failing golden's diff images here
+test/**/failures/

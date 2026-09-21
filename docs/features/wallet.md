@@ -61,6 +61,9 @@ send appears without a reload. `refresh()` backs pull-to-refresh and the error r
   auth, so the name is `ProfileCubit`'s locally-stored `displayName`, read via
   `UserProfile.greetingName`; with nothing saved it falls back to `Wallet` rather than fabricating a
   name. The greeting word itself is real — derived from the clock by `DateTimeX.greeting`.
+- **The header and `ActivityRow` read "now" from `ClockScope`, not `DateTime.now()`.** Both render
+  clock-derived words, so the golden pins a fixed `Clock` above the `MaterialApp`; with no scope in
+  the tree, `ClockScope.of` falls back to `SystemClock` and the app is unchanged.
 - **`WalletPage` reads the app-wide `ProfileCubit` rather than creating one.** It is provided above
   the shell by `App`; a screen resolving its own copy would show a stale name the moment the profile
   screen changed it. Which tab is current is owned by the `StatefulShellRoute` itself, not a cubit —

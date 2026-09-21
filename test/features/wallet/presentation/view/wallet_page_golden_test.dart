@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:novapay/config/theme/app_theme.dart';
+import 'package:novapay/core/time/clock_scope.dart';
 import 'package:novapay/features/profile/domain/entities/user_profile.dart';
 import 'package:novapay/features/profile/presentation/cubit/profile_cubit.dart';
 import 'package:novapay/features/wallet/domain/entities/activity_item.dart';
@@ -14,9 +15,14 @@ import 'package:novapay/features/wallet/presentation/cubit/wallet_cubit.dart';
 import 'package:novapay/features/wallet/presentation/view/wallet_page.dart';
 import 'package:novapay/l10n/l10n.dart';
 
+import '../../../../helpers/test_clock.dart';
+
 class _MockWalletCubit extends MockCubit<WalletState> implements WalletCubit;
 
 class _MockProfileCubit extends MockCubit<ProfileState> implements ProfileCubit;
+
+// Pinned, or the greeting and the day labels drift with the wall clock.
+final DateTime _pinnedNow = DateTime(2026, 9, 17, 9);
 
 WalletSnapshot _readySnapshot() => WalletSnapshot(
   confirmedKobo: 24800000,
@@ -64,11 +70,14 @@ void main() {
         BlocProvider<WalletCubit>.value(value: wallet),
         BlocProvider<ProfileCubit>.value(value: profile),
       ],
-      child: MaterialApp(
-        theme: theme ?? AppTheme.light,
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: const WalletView(),
+      child: ClockScope(
+        clock: TestClock(_pinnedNow),
+        child: MaterialApp(
+          theme: theme ?? AppTheme.light,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const WalletView(),
+        ),
       ),
     );
   }
