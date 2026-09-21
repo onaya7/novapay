@@ -1,6 +1,7 @@
 /// The `path:` every `GoRoute` answers to. The four tab paths are branch
 /// roots; everything else is a task pushed over the shell.
 abstract class RoutesPath {
+  static const String splash = '/splash';
   static const String wallet = '/';
   static const String savings = '/savings';
   static const String activity = '/activity';

@@ -6,7 +6,7 @@
 	build-dev-apk build-staging-apk build-prod-apk \
 	build-dev-aab build-staging-aab build-prod-aab \
 	build-dev-ipa build-staging-ipa build-prod-ipa \
-	get codegen gen-l10n \
+	get codegen gen-l10n splash-art splash \
 	analyze bloc-lint lint format format-check \
 	test coverage golden golden-update ci \
 	clean help
@@ -55,6 +55,12 @@ codegen: ## Run build_runner for freezed, json_serializable and injectable
 
 gen-l10n: ## Regenerate lib/l10n/gen from lib/l10n/arb/*.arb
 	fvm flutter gen-l10n
+
+splash-art: ## Redraw assets/splash from the app typeface
+	fvm flutter test tool/make_splash_art.dart
+
+splash: splash-art ## Regenerate the native launch screens from the art
+	fvm dart run flutter_native_splash:create
 
 analyze: ## flutter analyze; exits non-zero on info, same as CI
 	fvm flutter analyze lib test

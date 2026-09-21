@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:novapay/app/routes/routes_name.dart';
 import 'package:novapay/app/routes/routes_path.dart';
 import 'package:novapay/app/view/app_shell.dart';
+import 'package:novapay/app/view/splash_view.dart';
 import 'package:novapay/features/funding/presentation/view/add_money_page.dart';
 import 'package:novapay/features/profile/presentation/view/profile_page.dart';
 import 'package:novapay/features/savings/domain/entities/savings_goal_item.dart';
@@ -68,8 +69,13 @@ final List<RouteBase> taskRoutes = [
 /// The four tabs are branches, so each keeps its own back stack and scroll
 /// position across a switch.
 GoRouter buildRouter() => GoRouter(
-  initialLocation: RoutesPath.wallet,
+  initialLocation: RoutesPath.splash,
   routes: [
+    GoRoute(
+      path: RoutesPath.splash,
+      name: RoutesName.splash,
+      builder: (context, state) => const SplashView(),
+    ),
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) =>
           AppShell(navigationShell: navigationShell),

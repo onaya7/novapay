@@ -4,7 +4,9 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:novapay/app/app.dart';
 import 'package:novapay/app/presentation/cubit/locale_cubit.dart';
+import 'package:novapay/app/presentation/cubit/splash_cubit.dart';
 import 'package:novapay/app/presentation/cubit/theme_cubit.dart';
+import 'package:novapay/app/view/splash_view.dart';
 import 'package:novapay/config/theme/app_theme.dart';
 import 'package:novapay/config/theme/app_theme_colors.dart';
 import 'package:novapay/core/injections/injection.dart';
@@ -27,6 +29,8 @@ class _MockThemeCubit extends MockCubit<AppThemeMode> implements ThemeCubit;
 class _MockLocaleCubit extends MockCubit<AppLocale> implements LocaleCubit;
 
 class _MockProfileCubit extends MockCubit<ProfileState> implements ProfileCubit;
+
+class _MockSplashCubit extends MockCubit<SplashStatus> implements SplashCubit;
 
 class _MockNotificationService extends Mock implements NotificationService;
 
@@ -87,23 +91,50 @@ void main() {
     when(transferSyncNotifier.start).thenAnswer((_) async {});
     when(transferSyncNotifier.dispose).thenAnswer((_) async {});
     sl.registerFactory<TransferSyncNotifier>(() => transferSyncNotifier);
+
+    final splash = _MockSplashCubit();
+    when(splash.start).thenAnswer((_) async {});
+    whenListen(
+      splash,
+      Stream.value(SplashStatus.ready),
+      initialState: SplashStatus.preparing,
+    );
+    sl.registerFactory<SplashCubit>(() => splash);
   });
 
   tearDown(sl.reset);
 
+  /// Pumps the app and lets the splash hand off, which is what a real launch
+  /// does before any screen under test is reachable.
+  Future<void> launch(WidgetTester tester) async {
+    await tester.pumpWidget(const App());
+    await tester.pump();
+    await tester.pump();
+  }
+
   group('App', () {
-    testWidgets('opens on the wallet', (tester) async {
+    testWidgets('opens on the splash, not straight on a screen', (
+      tester,
+    ) async {
       // A const instance is canonicalized, so the constructor never runs.
       // ignore: prefer_const_constructors
       await tester.pumpWidget(App());
 
+      expect(find.byType(SplashView), findsOneWidget);
+      expect(find.byType(WalletPage), findsNothing);
+    });
+
+    testWidgets('the splash hands off to the wallet', (tester) async {
+      await launch(tester);
+
+      expect(find.byType(SplashView), findsNothing);
       expect(find.byType(WalletPage), findsOneWidget);
     });
 
     testWidgets('every tab is reachable from the nav bar', (tester) async {
       // Every tab starts loading, and loading is a spinner that never stops
       // animating, so this pumps rather than settling.
-      await tester.pumpWidget(const App());
+      await launch(tester);
 
       await tester.tap(find.text('Savings'));
       await tester.pump();
@@ -123,7 +154,7 @@ void main() {
     });
 
     testWidgets('ships both themes, each carrying its roles', (tester) async {
-      await tester.pumpWidget(const App());
+      await launch(tester);
 
       final app = tester.widget<MaterialApp>(find.byType(MaterialApp));
       expect(app.theme, AppTheme.light);

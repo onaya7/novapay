@@ -1,6 +1,7 @@
 /// The `name:` every `GoRoute` answers to, used with `context.pushNamed(...)`
 /// rather than a raw path string at any call site.
 abstract class RoutesName {
+  static const String splash = 'splash';
   static const String wallet = 'wallet';
   static const String savings = 'savings';
   static const String activity = 'activity';

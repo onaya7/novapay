@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
@@ -11,10 +9,10 @@ import 'package:novapay/core/injections/injection.dart';
 import 'package:novapay/features/profile/presentation/cubit/profile_cubit.dart';
 import 'package:novapay/l10n/l10n.dart';
 
-/// Both cubits here are app-wide: the theme paints every screen, and the
-/// profile name is read by the wallet greeting as well as the profile
-/// screen. The notification pipeline is started once in `bootstrap()`,
-/// before this widget exists, and outlives it for the life of the process.
+/// The three cubits here are app-wide: the theme paints every screen, and the
+/// profile name is read by the wallet greeting as well as the profile screen.
+/// All of them, and the notification pipeline, are started in `bootstrap()`
+/// before this widget exists, and outlive it for the life of the process.
 class App extends StatefulWidget {
   const new({super.key});
 
@@ -30,13 +28,6 @@ class _AppState extends State<App> {
   // Built once and held here, not inline in build(): a fresh GoRouter on
   // every theme toggle would reset navigation back to the initial route.
   final GoRouter _router = buildRouter();
-
-  @override
-  void initState() {
-    super.initState();
-    // Once, not per screen: two tabs read the same name.
-    unawaited(_profile.start());
-  }
 
   @override
   Widget build(BuildContext context) {

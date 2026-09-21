@@ -1,0 +1,31 @@
+# Regenerate with `make splash` after changing anything here or the artwork.
+# The artwork itself comes from tool/make_splash_art.dart.
+#
+# Brand blue in both modes on purpose: AppThemeColors keeps `primary` identical
+# light and dark, so a mode-switching splash would invent a distinction the
+# palette does not make. That is why there is no top-level `color_dark` — with
+# no drawable-night/ the resolver falls back to drawable/, same colour, half
+# the files.
+flutter_native_splash:
+  color: "#1174ED"
+  image: assets/splash/wordmark.png
+
+  android: true
+  ios: true
+  web: false
+  fullscreen: false
+  android_gravity: center
+  ios_content_mode: center
+
+  # Android 12+ draws its own splash and masks the icon to a circle, clipping
+  # anything outside it, so this slot gets the initial rather than the lockup.
+  # The dark keys repeat the light ones but are load-bearing: values-night-v31
+  # is built from its own template, and without them the generator strips both
+  # the background colour and the icon, leaving the launcher icon on black.
+  android_12:
+    color: "#1174ED"
+    color_dark: "#1174ED"
+    image: assets/splash/android12/mark.png
+    image_dark: assets/splash/android12/mark.png
+    icon_background_color: "#1174ED"
+    icon_background_color_dark: "#1174ED"

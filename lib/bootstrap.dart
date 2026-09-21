@@ -9,6 +9,7 @@ import 'package:novapay/core/injections/injection.dart';
 import 'package:novapay/core/notifications/notification_service.dart';
 import 'package:novapay/core/notifications/transfer_sync_notifier.dart';
 import 'package:novapay/core/sync/sync_scheduler.dart';
+import 'package:novapay/features/profile/presentation/cubit/profile_cubit.dart';
 
 class AppBlocObserver extends BlocObserver {
   const new();
@@ -49,6 +50,8 @@ Future<void> bootstrap(
   // drain first would land new sends in that seed and silence their alert.
   await sl<TransferSyncNotifier>().start();
   await sl<SyncScheduler>().start();
+  // Awaited, not fired and forgotten, so the greeting resolves before paint.
+  await sl<ProfileCubit>().start();
 
   Bloc.observer = const AppBlocObserver();
 

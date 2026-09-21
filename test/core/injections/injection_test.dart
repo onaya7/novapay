@@ -7,6 +7,7 @@ import 'package:hive_ce/hive.dart';
 import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:novapay/app/presentation/cubit/locale_cubit.dart';
+import 'package:novapay/app/presentation/cubit/splash_cubit.dart';
 import 'package:novapay/config/flavor/flavor.dart';
 import 'package:novapay/config/flavor/flavor_config.dart';
 import 'package:novapay/core/auth/biometric_authenticator.dart';
@@ -66,6 +67,7 @@ void main() {
     );
     expect(sl<NotificationService>(), isA<NotificationServiceImpl>());
     expect(sl<LocaleCubit>(), isA<LocaleCubit>());
+    expect(sl<SplashCubit>(), isA<SplashCubit>());
     expect(sl<TransferSyncNotifier>(), isA<TransferSyncNotifier>());
     expect(
       identical(sl<NotificationService>(), sl<NotificationService>()),

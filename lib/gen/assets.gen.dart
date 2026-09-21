@@ -24,6 +24,17 @@ class $AssetsImagesGen {
   List<AssetGenImage> get values => [profile];
 }
 
+class $AssetsSplashGen {
+  const $AssetsSplashGen();
+
+  /// File path: assets/splash/wordmark.png
+  AssetGenImage get wordmark =>
+      const AssetGenImage('assets/splash/wordmark.png');
+
+  /// List of all assets
+  List<AssetGenImage> get values => [wordmark];
+}
+
 class $AssetsImagesBanksGen {
   const $AssetsImagesBanksGen();
 
@@ -81,6 +92,7 @@ class $AssetsImagesBanksGen {
 
 abstract final class Assets {
   static const $AssetsImagesGen images = $AssetsImagesGen();
+  static const $AssetsSplashGen splash = $AssetsSplashGen();
 }
 
 class AssetGenImage {
