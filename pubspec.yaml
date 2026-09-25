@@ -9,7 +9,7 @@ environment:
 
 dependencies:
   bloc: ^9.2.1
-  cupertino_ui: ^1.1.0
+  cupertino_ui: ^1.1.1
   dartz: ^0.10.1
   dio: ^5.11.1
   equatable: ^2.1.0
